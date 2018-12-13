@@ -15,6 +15,7 @@ class Node:
     def __str__(self):
         return 'Node #%d' % self.id
 
+# Create distinct node types so we can distinguish them later.
 class Sensor(Node):
     pass
 
@@ -64,16 +65,22 @@ class Graph:
 
     def compile(self):
         for output in self.outputs:
-            self.mark_recurrent_connections(output, set())
+            self._mark_recurrent_connections(output, set())
 
-    def mark_recurrent_connections(self, curr, visited):
+    def _mark_recurrent_connections(self, curr, visited):
         visited.add(curr)
 
         for connection in self.connections[curr]:
             if connection.target in visited:
                 connection.is_recurrent = True
             else:
-                self.mark_recurrent_connections(connection.target, visited.copy())
+                self._mark_recurrent_connections(connection.target, visited.copy())
+
+    def disable_connection(self, node, other):
+        for connection in self.connections[node]:
+            if connection.target == other:
+                connection.is_enabled = False
+                self.print('Disabling connection between %s and %s.' % (connection.origin, connection.target))
 
 
     def compute(self, x):
@@ -88,21 +95,23 @@ class Graph:
         network_output = []
 
         for output in self.outputs:
-            network_output.append(self.compute_output(output))
+            network_output.append(self._compute_output(output))
 
         return network_output
 
-    def compute_output(self, node, level=0):
+    def _compute_output(self, node, level=0):
         self.print('%s%s Computing...' % ('\t' * level, node))
 
         node_output = node.output if isinstance(node, Sensor) else node.bias
 
         for connection in self.connections[node]:
-            if connection.is_recurrent:
+            if not connection.is_enabled:
+                self.print('%s%s Connection to this node is disabled!' % ('\t' * (level + 1), connection.target))
+            elif connection.is_recurrent:
                 node_output += connection.weight * connection.target.prev_output
-                self.print('%s%s Output (recurrent): %f' % (('\t' * (level + 1), connection.target, connection.target.prev_output)))
+                self.print('%s%s Output (recurrent): %f' % ('\t' * (level + 1), connection.target, connection.target.prev_output))
             else:
-                node_output += connection.weight * self.compute_output(connection.target, level=level + 1)
+                node_output += connection.weight * self._compute_output(connection.target, level=level + 1)
 
         node.output = node_output
         self.print('%s%s Output: %f' % ('\t' * level, node, node.output))
@@ -126,5 +135,9 @@ if __name__ == '__main__':
 
     x = [1, 1, 1]
     g.compute(x)
+    g.compute(x)
+
+    g.disable_connection(g.nodes[4], g.nodes[3])
+
     g.compute(x)
     
