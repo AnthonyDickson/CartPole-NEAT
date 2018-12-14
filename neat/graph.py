@@ -326,9 +326,9 @@ class Graph:
 
     def print_connections(self):   
         """Print the connections (inputs) of every node in the graph."""     
-        for node in self.nodes:
-            for node_input in node.inputs:
-                print(node_input)
+        for node_id, _ in enumerate(self.nodes):
+            for input_connection in self.connections[node_id]:
+                print(input_connection)
 
     def print(self, msg, verbosity=Verbosity.MINIMAL):
         """Print a message whose visibility is controlled by the verbosity of the message and the graphs verbosity setting.
@@ -339,4 +339,3 @@ class Graph:
         """     
         if self.verbosity.value >= verbosity.value:
             print(msg)
-
