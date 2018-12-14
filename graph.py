@@ -2,6 +2,7 @@ from collections import defaultdict
 from enum import Enum
 from math import exp
 import random
+import unittest
 
 import numpy as np
 
@@ -37,10 +38,21 @@ class Node:
         self.prev_output = 0
         self.bias = random.gauss(0, 1)
         self.activation = activation
-        self.inputs = []
 
         self.id = Node.count
         Node.count += 1
+
+    def copy(self):
+        """Make a copy of a node.
+        
+        Returns: a copy of the node.
+        """
+        copy = self.__class__()
+
+        copy.bias = self.bias
+        copy.activation = self.activation
+
+        return copy
 
     def __str__(self):
         return 'Node_%d' % self.id
@@ -48,25 +60,38 @@ class Node:
 # Create distinct node types so we can distinguish them later.
 class Sensor(Node):
     """A sensor node (or input node) in a neural network computation graph."""
+    
     def __init__(self):
         super().__init__(Activations.identity)
 
+    def __str__(self):
+        return 'Sensor_%d' % self.id
+
 class Hidden(Node):
     """A hidden node in a neural network computation graph."""
+
     def __init__(self, activation=Activations.sigmoid):
         super().__init__(activation)
 
+    def __str__(self):
+        return 'Hidden_%d' % self.id
+
 class Output(Node):
     """An output node in a neural network computation graph."""
-    pass
+    def __init__(self, activation=Activations.sigmoid):
+        super().__init__(activation)
+
+
+    def __str__(self):
+        return 'Output_%d' % self.id
 
 class Connection:
     """A connection between two nodes in a neural network computation graph."""
     count = 0
 
-    def __init__(self, origin, target):
-        self.origin = origin
-        self.target = target
+    def __init__(self, origin_id, target_id):
+        self.origin_id = origin_id
+        self.target_id = target_id
         self.weight = random.gauss(0, 1)
         self.is_enabled = True
         self.is_recurrent = False
@@ -74,8 +99,20 @@ class Connection:
         self.id = Connection.count
         Connection.count += 1
 
+    def copy(self):
+        """Make a copy of a connection.
+
+        Returns: the copy of the connection.
+        """
+        copy = Connection(self.origin_id, self.target_id)
+
+        copy.weight = self.weight
+        copy.is_enabled = self.is_enabled
+
+        return copy
+
     def __str__(self):
-        return '{} -> {}'.format(self.origin, self.target) + (' (recurrent)' if self.is_recurrent else '')
+        return '{} -> {}'.format(self.origin_id, self.target_id) + (' (recurrent)' if self.is_recurrent else '')
 
 class Verbosity(Enum):
     SILENT = 0
@@ -94,7 +131,7 @@ class InvalidGraphInputError(Exception):
 class Graph:
     """A computation graph for arbitrary neural networks that allows recurrent connections."""
 
-    def __init__(self, verbosity=Verbosity.MINIMAL):        
+    def __init__(self, verbosity=Verbosity.SILENT):        
         """Initialise the graph.
 
         Arguments:
@@ -104,9 +141,25 @@ class Graph:
         self.sensors = []
         self.hidden = []
         self.outputs = []
+        self.connections = defaultdict(lambda: [])
 
         self.verbosity = verbosity
         self.is_compiled = False
+
+    def copy(self):
+        """Make a copy of a graph.
+
+        Returns: the copy of the graph.
+        """
+        copy = Graph()
+        
+        for i, node in enumerate(self.nodes):
+            copy.add_node(node.copy())
+
+            for connection in self.connections[i]:
+                copy.connections[i].append(connection.copy())
+    
+        return copy
 
     def compile(self):
         """Make sure the graph is valid and prepare it for computation.
@@ -130,40 +183,40 @@ class Graph:
 
         self.is_compiled = True
 
-    def _mark_recurrent_inputs(self, curr, visited=set()):
+    def _mark_recurrent_inputs(self, node_id, visited=set()):
         """Mark recurrent connections (i.e. cycles) in the graph.
 
         Arguments:
-            curr: the current node that is being evaluated. This should initially be set to a terminal node (such as an output node).
+            node_id: the id (position in the nodes list) of the current node that is being evaluated. This should initially be set to a terminal node (such as an output node).
             visited: the list of visited nodes in the search. Can also be thought of the current node's ancestor nodes. Initially this should be an empty set.
         """
-        visited.add(curr)
+        visited.add(node_id)
 
-        for node_input in curr.inputs:
-            if node_input.target in visited:
-                node_input.is_recurrent = True
+        for input_connection in self.connections[node_id]:
+            if input_connection.target_id in visited:
+                input_connection.is_recurrent = True
             else:
-                self._mark_recurrent_inputs(node_input.target, visited.copy())
+                self._mark_recurrent_inputs(input_connection.target_id, visited.copy())
 
-    def _has_path_to_input(self, node, visited=set()):
+    def _has_path_to_input(self, node_id, visited=set()):
         """Check if the given node has a path to the input.
 
         This is generally needed to check the the graph has at least one input connected to an output.
 
         Arguments:
-            node: the node that should be checked for a path to an input node.
+            node_id: the id of the node that should be checked for a path to an input node.
             visited: the list of visited nodes in the search. Initially this should be an empty set.
 
         Returns: True if a path exists to an input node, False otherwise.
         """
-        visited.add(node)
+        visited.add(node_id)
 
-        for node_input in node.inputs:
-            if not node_input.target in visited: 
-                if self._has_path_to_input(node_input.target, visited.copy()):
+        for node_input in self.connections[node_id]:
+            if not node_input.target_id in visited: 
+                if self._has_path_to_input(node_input.target_id, visited.copy()):
                     return True
 
-        return isinstance(node, Sensor)
+        return isinstance(self.nodes[node_id], Sensor)
 
     def add_node(self, node):
         """Add a node to the graph.
@@ -174,9 +227,9 @@ class Graph:
         self.nodes.append(node)
 
         if isinstance(node, Sensor):
-            self.sensors.append(node)
+            self.sensors.append(len(self.nodes) - 1)
         elif isinstance(node, Output):
-            self.outputs.append(node)
+            self.outputs.append(len(self.nodes) - 1)
 
     def add_nodes(self, nodes):
         """Helper function to add a list of nodes to the graph.
@@ -187,28 +240,28 @@ class Graph:
         for node in nodes:
             self.add_node(node)
 
-    def add_input(self, node, other):
+    def add_input(self, node_id, other_id):
         """Add an input (form a connection) to a node. 
 
         Arguments:
-            node: the node that will receive the input.
-            other: the node that will provide the input.
+            node_id: the id of the node that will receive the input.
+            other_id: the id of the node that will provide the input.
         """
-        node.inputs.append(Connection(node, other))
+        self.connections[node_id].append(Connection(node_id, other_id))
 
-    def disable_input(self, node, other):
+    def disable_input(self, node_id, other_id):
         """Disable an input of a node.
 
         Does not remove the input connection.
 
         Arguments:
-            node: the node that receives the input.
-            other: the node that provides the input.
+            node_id: the id of the node that receives the input.
+            other_id: the id of the node that provides the input.
         """
-        for node_input in node.inputs:
-            if node_input.target == other:
+        for node_input in self.connections[node_id]:
+            if node_input.target_id == other_id:
                 node_input.is_enabled = False
-                self.print('Disabling input from %s to %s.' % (node_input.origin, node_input.target))
+                self.print('Disabling input from %s to %s.' % (node_input.origin_id, node_input.target_id))
 
     def compute(self, x):
         """Compute the output of the neural network graph.
@@ -228,39 +281,43 @@ class Graph:
             node.prev_output = node.output
 
         for x, sensor in zip(x, self.sensors):
-            sensor.output = x
+            self.nodes[sensor].output = x
 
         network_output = []
 
         for output in self.outputs:
             network_output.append(self._compute_output(output))
 
-        output = Activations.softmax(network_output)
+        output = Activations.softmax(network_output) if len(self.outputs) > 0 else network_output
         self.print('Network output: %s' % output)
 
         return output
 
-    def _compute_output(self, node, level=0):
+    def _compute_output(self, node_id, level=0):
         """Compute the output of a node.
 
         Arguments:
-            node: the node whose output should be computed.
+            node_id: the id of the node whose output should be computed.
             level: the level, or depth, the current node relative to the starting node (typically an output node).
 
         Returns: the output of the node.
         """
-        self.print('%s%s Computing...' % ('\t' * level, node))
+        self.print('%s%s Computing...' % ('\t' * level, node_id))
+
+        node = self.nodes[node_id]
 
         node_output = node.output if isinstance(node, Sensor) else node.bias
 
-        for node_input in node.inputs:
-            if not node_input.is_enabled:
-                self.print('%s%s Input from this node is disabled!' % ('\t' * (level + 1), node_input.target))
-            elif node_input.is_recurrent:
-                node_output += node_input.weight * node_input.target.prev_output
-                self.print('%s%s Output (recurrent): %f' % ('\t' * (level + 1), node_input.target, node_input.target.prev_output))
+        for input_connection in self.connections[node_id]:
+            target = self.nodes[input_connection.target_id]
+
+            if not input_connection.is_enabled:
+                self.print('%s%s Input from this node is disabled!' % ('\t' * (level + 1), input_connection.target_id))
+            elif input_connection.is_recurrent:
+                node_output += input_connection.weight * target.prev_output
+                self.print('%s%s Output (recurrent): %f' % ('\t' * (level + 1), input_connection.target_id, target.prev_output))
             else:
-                node_output += node_input.weight * self._compute_output(node_input.target, level=level + 1)
+                node_output += input_connection.weight * self._compute_output(input_connection.target_id, level=level + 1)
 
         node.output = node.activation(node_output)
         self.print('%s%s Output: %f' % ('\t' * level, node, node.output))
@@ -283,31 +340,62 @@ class Graph:
         if self.verbosity.value >= verbosity.value:
             print(msg)
 
+class GraphUnitTest(unittest.TestCase):
+    def test_compile_raises_error(self):
+        g = Graph()
+        self.assertRaises(InvalidGraphError, g.compile)
+
+        s1 = Sensor()
+        g.add_node(s1)   
+        
+        self.assertRaises(InvalidGraphError, g.compile)
+        
+        o1 = Output()
+        g.add_node(o1)
+        
+        self.assertRaises(InvalidGraphError, g.compile)
+
+    def test_comutation(self):
+        g = Graph()
+        nodes = [Sensor(), Sensor(), Sensor(), Output(), Hidden()]
+        g.add_nodes(nodes)
+
+        for other in [0, 2, 4]:
+            g.add_input(3, other)
+
+        for other in [0, 1, 3]:
+            g.add_input(4, other)
+
+        g.compile()
+
+        x = [1, 1, 1]
+        g.compute(x)
+        g.compute(x)
+
+        g.disable_input(4, 3)
+        g.compute(x)
+
+    def test_copy(self):
+        g1 = Graph()
+        nodes = [Sensor(), Sensor(), Sensor(), Output(), Hidden()]
+        g1.add_nodes(nodes)
+
+        for other in [0, 2, 4]:
+            g1.add_input(3, other)
+
+        for other in [0, 1, 3]:
+            g1.add_input(4, other)
+
+        g2 = g1.copy()
+
+        g1.compile()
+        g2.compile()
+
+        x = [1, 1, 1]
+        self.assertEqual(g1.compute(x), g2.compute(x))
+
 if __name__ == '__main__':
     random.seed(42)
 
-    g = Graph()
-    nodes = [Sensor(), Sensor(), Sensor(), Output(), Hidden()]
-    g.add_nodes(nodes)
-
-    node = nodes[3]
-
-    for other in [0, 2, 4]:
-        g.add_input(node, nodes[other])
-
-    node = nodes[4]
-
-    for other in [0, 1, 3]:
-        g.add_input(node, nodes[other])
-
-    g.compile()
-    g.print_connections()
-
-    x = [1, 1, 1]
-    g.compute(x)
-    g.compute(x)
-
-    g.disable_input(g.nodes[4], g.nodes[3])
-
-    g.compute(x)
+    unittest.main()
     
