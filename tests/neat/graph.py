@@ -1,7 +1,7 @@
 import random
 import unittest
 
-from cartpole.neat.graph import Sensor, Hidden, Output, Connection, Graph, GraphNotCompiledError, InvalidGraphError, InvalidGraphInputError
+from neat.graph import Sensor, Hidden, Output, Connection, Graph, GraphNotCompiledError, InvalidGraphError, InvalidGraphInputError
 
 class GraphUnitTest(unittest.TestCase):
     def test_compile_raises_error(self):
