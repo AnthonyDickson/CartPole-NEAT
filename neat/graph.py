@@ -1,8 +1,9 @@
+"""Describes a computation graph."""
+
 from collections import defaultdict
 from enum import Enum
 from math import exp
 import random
-import unittest
 
 import numpy as np
 
@@ -10,23 +11,60 @@ class Activations:
     """Contains various activation functions."""
     @staticmethod
     def identity(x):
+        """The identity activation function.
+
+        Arguments:
+            x: The value to modify.
+
+        Returns: x unchanged.
+        """
         return x
 
     @staticmethod
     def relu(x):
+        """The Rectified Linear Unit activation function.
+
+        Arguments:
+            x: The value to modify.
+
+        Returns: x if x > 0, 0 otherwise.
+        """
         return max(0, x)
 
     @staticmethod
     def sigmoid(x):
+        """The logistic activation function.
+
+        Arguments:
+            x: The value to modify.
+
+        Returns: 1 / (1 + exp(-x)).
+        """
         return 1 / (1 + exp(-x))
 
     @staticmethod
     def tanh(x):
+        """The hyperbolic tangent activation function.
+
+        Essentially a scaled and shifted logistic function.
+
+        Arguments:
+            x: The value to modify.
+
+        Returns: (exp(x) - exp(-x)) / (exp(x) + exp(-x)).
+        """
         return (exp(x) - exp(-x)) / (exp(x) + exp(-x))
 
     @staticmethod
-    def softmax(z):
-        z_exp = np.exp(z)
+    def softmax(X):
+        """The softmax activation function..
+
+        Arguments:
+            X: The list of values to modify.
+
+        Returns: a list of numbers in the interval [0, 1) representing a probability distribution.
+        """
+        z_exp = np.exp(X)
         return z_exp / z_exp.sum()
 
 class Node:
@@ -44,7 +82,7 @@ class Node:
 
     def copy(self):
         """Make a copy of a node.
-        
+
         Returns: a copy of the node.
         """
         copy = self.__class__()
@@ -60,7 +98,7 @@ class Node:
 # Create distinct node types so we can distinguish them later.
 class Sensor(Node):
     """A sensor node (or input node) in a neural network computation graph."""
-    
+
     def __init__(self):
         super().__init__(Activations.identity)
 
@@ -78,9 +116,9 @@ class Hidden(Node):
 
 class Output(Node):
     """An output node in a neural network computation graph."""
+
     def __init__(self, activation=Activations.sigmoid):
         super().__init__(activation)
-
 
     def __str__(self):
         return 'Output_%d' % self.id
@@ -112,26 +150,32 @@ class Connection:
         return copy
 
     def __str__(self):
-        return '{} -> {}'.format(self.origin_id, self.target_id) + (' (recurrent)' if self.is_recurrent else '')
+        return '{} -> {}'.format(self.origin_id, self.target_id) + \
+            (' (recurrent)' if self.is_recurrent else '')
 
 class Verbosity(Enum):
+    """An enum capturing different verbosity levels for logging."""
     SILENT = 0
     MINIMAL = 1
-    FULL = 2    
+    FULL = 2
 
 class InvalidGraphError(Exception):
+    """An error that occurs when a graph is tried to be compiled but it does not have a valid
+     structure."""
     pass
 
 class GraphNotCompiledError(Exception):
+    """An error that occurs when a graph is tried to be used but has not been compiled."""
     pass
 
 class InvalidGraphInputError(Exception):
+    """An error that occurs when the input to a graph does not match the number of input nodes."""
     pass
 
 class Graph:
     """A computation graph for arbitrary neural networks that allows recurrent connections."""
 
-    def __init__(self, verbosity=Verbosity.SILENT):        
+    def __init__(self, verbosity=Verbosity.SILENT):
         """Initialise the graph.
 
         Arguments:
@@ -152,44 +196,50 @@ class Graph:
         Returns: the copy of the graph.
         """
         copy = Graph()
-        
+
         for i, node in enumerate(self.nodes):
             copy.add_node(node.copy())
 
             for connection in self.connections[i]:
                 copy.connections[i].append(connection.copy())
-    
+
         return copy
 
     def compile(self):
         """Make sure the graph is valid and prepare it for computation.
-        
+
         Throws: InvalidGraphError
         """
-        if len(self.sensors) == 0:
+        if not self.sensors:
             raise InvalidGraphError('Graph needs at least one sensor (input) node.')
 
-        if len(self.outputs) == 0:
+        if not self.outputs:
             raise InvalidGraphError('Graph needs at least one output node.')
 
         has_path_to_input = False
 
         for output in self.outputs:
-            self._mark_recurrent_inputs(output)            
+            self._mark_recurrent_inputs(output)
             has_path_to_input |= self._has_path_to_input(output)
 
         if not has_path_to_input:
-            raise InvalidGraphError('Graph needs at least one sensor (input) to be connected to an output.')
+            raise InvalidGraphError('Graph needs at least one sensor (input) to be connected \
+                to an output.')
 
         self.is_compiled = True
 
-    def _mark_recurrent_inputs(self, node_id, visited=set()):
+    def _mark_recurrent_inputs(self, node_id, visited=None):
         """Mark recurrent connections (i.e. cycles) in the graph.
 
         Arguments:
-            node_id: the id (position in the nodes list) of the current node that is being evaluated. This should initially be set to a terminal node (such as an output node).
-            visited: the list of visited nodes in the search. Can also be thought of the current node's ancestor nodes. Initially this should be an empty set.
+            node_id: the id (position in the nodes list) of the current node that is being
+                evaluated. This should initially be set to a terminal node (such as an output node).
+            visited: the list of visited nodes in the search. Can also be thought of the current
+                node's ancestor nodes. Initially this should be an empty set.
         """
+        if visited is None:
+            visited = set()
+
         visited.add(node_id)
 
         for input_connection in self.connections[node_id]:
@@ -198,10 +248,11 @@ class Graph:
             else:
                 self._mark_recurrent_inputs(input_connection.target_id, visited.copy())
 
-    def _has_path_to_input(self, node_id, visited=set()):
+    def _has_path_to_input(self, node_id, visited=None):
         """Check if the given node has a path to the input.
 
-        This is generally needed to check the the graph has at least one input connected to an output.
+        This is generally needed to check the the graph has at least one input connected to an
+        output.
 
         Arguments:
             node_id: the id of the node that should be checked for a path to an input node.
@@ -209,10 +260,13 @@ class Graph:
 
         Returns: True if a path exists to an input node, False otherwise.
         """
+        if visited is None:
+            visited = set()
+
         visited.add(node_id)
 
         for node_input in self.connections[node_id]:
-            if not node_input.target_id in visited: 
+            if not node_input.target_id in visited:
                 if self._has_path_to_input(node_input.target_id, visited.copy()):
                     return True
 
@@ -241,7 +295,7 @@ class Graph:
             self.add_node(node)
 
     def add_input(self, node_id, other_id):
-        """Add an input (form a connection) to a node. 
+        """Add an input (form a connection) to a node.
 
         Arguments:
             node_id: the id of the node that will receive the input.
@@ -261,7 +315,8 @@ class Graph:
         for node_input in self.connections[node_id]:
             if node_input.target_id == other_id:
                 node_input.is_enabled = False
-                self.print('Disabling input from %s to %s.' % (node_input.origin_id, node_input.target_id))
+                self.print('Disabling input from %s to %s.' % \
+                    (node_input.origin_id, node_input.target_id))
 
     def compute(self, x):
         """Compute the output of the neural network graph.
@@ -275,7 +330,8 @@ class Graph:
             raise GraphNotCompiledError('The graph must be compiled before being used.')
 
         if len(x) != len(self.sensors):
-            raise InvalidGraphInputError('The input dimenions do not match the number of input nodes in the graph.')
+            raise InvalidGraphInputError('The input dimensions do not match the number of input \
+                nodes in the graph.')
 
         for node in self.nodes:
             node.prev_output = node.output
@@ -288,7 +344,7 @@ class Graph:
         for output in self.outputs:
             network_output.append(self._compute_output(output))
 
-        output = Activations.softmax(network_output) if len(self.outputs) > 0 else network_output
+        output = Activations.softmax(network_output) if self.outputs else network_output
         self.print('Network output: %s' % output)
 
         return output
@@ -298,7 +354,8 @@ class Graph:
 
         Arguments:
             node_id: the id of the node whose output should be computed.
-            level: the level, or depth, the current node relative to the starting node (typically an output node).
+            level: the level, or depth, the current node relative to the starting node
+                (typically an output node).
 
         Returns: the output of the node.
         """
@@ -312,30 +369,34 @@ class Graph:
             target = self.nodes[input_connection.target_id]
 
             if not input_connection.is_enabled:
-                self.print('%s%s Input from this node is disabled!' % ('\t' * (level + 1), input_connection.target_id))
+                self.print('%s%s Input from this node is disabled!' % \
+                    ('\t' * (level + 1), input_connection.target_id))
             elif input_connection.is_recurrent:
                 node_output += input_connection.weight * target.prev_output
-                self.print('%s%s Output (recurrent): %f' % ('\t' * (level + 1), input_connection.target_id, target.prev_output))
+                self.print('%s%s Output (recurrent): %f' % \
+                    ('\t' * (level + 1), input_connection.target_id, target.prev_output))
             else:
-                node_output += input_connection.weight * self._compute_output(input_connection.target_id, level=level + 1)
+                node_output += input_connection.weight * \
+                    self._compute_output(input_connection.target_id, level=level + 1)
 
         node.output = node.activation(node_output)
         self.print('%s%s Output: %f' % ('\t' * level, node, node.output))
 
         return node.output
 
-    def print_connections(self):   
-        """Print the connections (inputs) of every node in the graph."""     
+    def print_connections(self):
+        """Print the connections (inputs) of every node in the graph."""
         for node_id, _ in enumerate(self.nodes):
             for input_connection in self.connections[node_id]:
                 print(input_connection)
 
     def print(self, msg, verbosity=Verbosity.MINIMAL):
-        """Print a message whose visibility is controlled by the verbosity of the message and the graphs verbosity setting.
-        
+        """Print a message whose visibility is controlled by the verbosity of the message and
+        the graphs verbosity setting.
+
         Arguments:
             msg: The string to print.
             verbosity: The verbosity of the message to print.
-        """     
+        """
         if self.verbosity.value >= verbosity.value:
             print(msg)
