@@ -155,7 +155,7 @@ class Connection:
         return copy
 
     def __str__(self):
-        return '{} -> {}'.format(self.origin_id, self.target_id) + \
+        return 'Connection_{}->{}'.format(self.origin_id, self.target_id) + \
             (' (recurrent)' if self.is_recurrent else '')
 
 class Verbosity(Enum):
