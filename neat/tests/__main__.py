@@ -1,13 +1,14 @@
 import sys
 import unittest
 
-from neat.tests import graph
+from neat.tests import graph, genome
 
 def main():
     loader = unittest.TestLoader()
     suite  = unittest.TestSuite()
 
     suite.addTests(loader.loadTestsFromModule(graph))
+    suite.addTests(loader.loadTestsFromModule(genome))
 
     runner = unittest.TextTestRunner()
     result = runner.run(suite)
