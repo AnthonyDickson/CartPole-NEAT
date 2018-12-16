@@ -1,0 +1,6 @@
+name: neat
+dependencies:
+  - python=3.7
+  - numpy
+  - pip:
+    - gym
