@@ -69,7 +69,7 @@ class Activations:
 
 class Node:
     """A node in a neural network computation graph."""
-    count = 0
+    count = 0  # a count of unique nodes
 
     def __init__(self, activation=Activations.identity):
         self.output = 0
@@ -86,7 +86,9 @@ class Node:
         Returns: a copy of the node.
         """
         copy = self.__class__()
+        Node.count -= 1  # copies of nodes are not unique and therefore not counted.
 
+        copy.id = self.id
         copy.bias = self.bias
         copy.activation = self.activation
 
@@ -125,7 +127,7 @@ class Output(Node):
 
 class Connection:
     """A connection between two nodes in a neural network computation graph."""
-    count = 0
+    count = 0  # a count of unique nodes
 
     def __init__(self, origin_id, target_id):
         self.origin_id = origin_id
@@ -144,8 +146,11 @@ class Connection:
         """
         copy = Connection(self.origin_id, self.target_id)
 
+        Connection.count -= 1  # copies of connections are not unique and therefore not counted.
+        copy.id = self.id
         copy.weight = self.weight
         copy.is_enabled = self.is_enabled
+        copy.is_recurrent = self.is_recurrent
 
         return copy
 
@@ -181,9 +186,8 @@ class Graph:
         Arguments:
             verbosity: how much should be printed to console.
         """
-        self.nodes = []
+        self.nodes = {}
         self.sensors = []
-        self.hidden = []
         self.outputs = []
         self.connections = defaultdict(lambda: [])
 
@@ -198,10 +202,14 @@ class Graph:
         copy = Graph()
 
         for i, node in enumerate(self.nodes):
-            copy.add_node(node.copy())
+            copy.add_node(self.nodes[node].copy())
 
             for connection in self.connections[i]:
                 copy.connections[i].append(connection.copy())
+
+        # If a graph is copied as-is, then it should still be compiled if the original was 
+        # compiled, and not compiled if the other was not compiled.
+        copy.is_compiled = self.is_compiled
 
         return copy
 
@@ -223,8 +231,8 @@ class Graph:
             has_path_to_input |= self._has_path_to_input(output)
 
         if not has_path_to_input:
-            raise InvalidGraphError('Graph needs at least one sensor (input) to be connected \
-                to an output.')
+            raise InvalidGraphError('Graph needs at least one sensor (input) to be connected' + \
+                'to an output.')
 
         self.is_compiled = True
 
@@ -266,7 +274,7 @@ class Graph:
         visited.add(node_id)
 
         for node_input in self.connections[node_id]:
-            if not node_input.target_id in visited:
+            if not node_input.target_id in visited and node_input.is_enabled:
                 if self._has_path_to_input(node_input.target_id, visited.copy()):
                     return True
 
@@ -278,12 +286,16 @@ class Graph:
         Arguments:
             node: The node to be added.
         """
-        self.nodes.append(node)
+        self.nodes[node.id] = node
 
         if isinstance(node, Sensor):
-            self.sensors.append(len(self.nodes) - 1)
+            self.sensors.append(node.id)
         elif isinstance(node, Output):
-            self.outputs.append(len(self.nodes) - 1)
+            self.outputs.append(node.id)
+
+        # Adding a node may break the graph so we force the graph to be compiled again to enforce
+        # a re-run of sanity and validity checks.
+        self.is_compiled = False
 
     def add_nodes(self, nodes):
         """Helper function to add a list of nodes to the graph.
@@ -294,6 +306,18 @@ class Graph:
         for node in nodes:
             self.add_node(node)
 
+    def add_connection(self, connection):
+        """Add a connection directly to the graph.
+
+        Arguments:
+            connection: The Connection object to be added to the graph.
+        """
+        self.connections[connection.origin_id].append(connection)
+
+        # Adding a connection may break the graph so we force the graph to be compiled again to 
+        # enforce a re-run of sanity and validity checks.
+        self.is_compiled = False
+
     def add_input(self, node_id, other_id):
         """Add an input (form a connection) to a node.
 
@@ -302,6 +326,10 @@ class Graph:
             other_id: the id of the node that will provide the input.
         """
         self.connections[node_id].append(Connection(node_id, other_id))
+
+        # Adding a connection may break the graph so we force the graph to be compiled again to 
+        # enforce a re-run of sanity and validity checks.
+        self.is_compiled = False
 
     def disable_input(self, node_id, other_id):
         """Disable an input of a node.
@@ -317,6 +345,10 @@ class Graph:
                 node_input.is_enabled = False
                 self.print('Disabling input from %s to %s.' % \
                     (node_input.origin_id, node_input.target_id))
+        
+        # Disabling a connection may break the graph so we force the graph to be compiled again to
+        # enforce a re-run of sanity and validity checks.
+        self.is_compiled = False
 
     def compute(self, x):
         """Compute the output of the neural network graph.
@@ -327,14 +359,15 @@ class Graph:
         Returns: the softmax output of the neural network graph.
         """
         if not self.is_compiled:
-            raise GraphNotCompiledError('The graph must be compiled before being used.')
+            raise GraphNotCompiledError('The graph must be compiled before being used, ' + \
+                'or after a change occured to the graph structure.')
 
         if len(x) != len(self.sensors):
-            raise InvalidGraphInputError('The input dimensions do not match the number of input \
-                nodes in the graph.')
+            raise InvalidGraphInputError('The input dimensions do not match the number of ' + \
+                ' input nodes in the graph.')
 
         for node in self.nodes:
-            node.prev_output = node.output
+            self.nodes[node].prev_output = self.nodes[node].output
 
         for x, sensor in zip(x, self.sensors):
             self.nodes[sensor].output = x

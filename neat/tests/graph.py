@@ -23,11 +23,11 @@ class GraphUnitTest(unittest.TestCase):
         nodes = [Sensor(), Sensor(), Sensor(), Output(), Hidden()]
         g.add_nodes(nodes)
 
-        for other in [0, 2, 4]:
-            g.add_input(3, other)
+        for other in [nodes[0], nodes[2], nodes[4]]:
+            g.add_input(nodes[3].id, other.id)
 
-        for other in [0, 1, 3]:
-            g.add_input(4, other)
+        for other in [nodes[0], nodes[1], nodes[3]]:
+            g.add_input(nodes[4].id, other.id)
 
         g.compile()
 
@@ -36,6 +36,7 @@ class GraphUnitTest(unittest.TestCase):
         g.compute(x)
 
         g.disable_input(4, 3)
+        g.compile()
         g.compute(x)
 
     def test_copy(self):
@@ -43,16 +44,15 @@ class GraphUnitTest(unittest.TestCase):
         nodes = [Sensor(), Sensor(), Sensor(), Output(), Hidden()]
         g1.add_nodes(nodes)
 
-        for other in [0, 2, 4]:
-            g1.add_input(3, other)
+        for other in [nodes[0], nodes[2], nodes[4]]:
+            g1.add_input(nodes[3].id, other.id)
 
-        for other in [0, 1, 3]:
-            g1.add_input(4, other)
+        for other in [nodes[0], nodes[1], nodes[3]]:
+            g1.add_input(nodes[4].id, other.id)
 
-        g2 = g1.copy()
 
         g1.compile()
-        g2.compile()
+        g2 = g1.copy()
 
         x = [1, 1, 1]
         self.assertEqual(g1.compute(x), g2.compute(x))
