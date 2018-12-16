@@ -16,4 +16,4 @@ install:
   - source activate test-environment
   - pip install -r requirements.txt
 script:
-  - test_suite.sh
+  - ./test_suite.sh
