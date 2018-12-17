@@ -207,7 +207,7 @@ class Graph:
             for connection in self.connections[i]:
                 copy.connections[i].append(connection.copy())
 
-        # If a graph is copied as-is, then it should still be compiled if the original was 
+        # If a graph is copied as-is, then it should still be compiled if the original was
         # compiled, and not compiled if the other was not compiled.
         copy.is_compiled = self.is_compiled
 
@@ -314,7 +314,7 @@ class Graph:
         """
         self.connections[connection.origin_id].append(connection)
 
-        # Adding a connection may break the graph so we force the graph to be compiled again to 
+        # Adding a connection may break the graph so we force the graph to be compiled again to
         # enforce a re-run of sanity and validity checks.
         self.is_compiled = False
 
@@ -327,7 +327,7 @@ class Graph:
         """
         self.connections[node_id].append(Connection(node_id, other_id))
 
-        # Adding a connection may break the graph so we force the graph to be compiled again to 
+        # Adding a connection may break the graph so we force the graph to be compiled again to
         # enforce a re-run of sanity and validity checks.
         self.is_compiled = False
 
@@ -345,7 +345,7 @@ class Graph:
                 node_input.is_enabled = False
                 self.print('Disabling input from %s to %s.' % \
                     (node_input.origin_id, node_input.target_id))
-        
+
         # Disabling a connection may break the graph so we force the graph to be compiled again to
         # enforce a re-run of sanity and validity checks.
         self.is_compiled = False

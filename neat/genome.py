@@ -1,6 +1,8 @@
+"""Implements a basic model of genes, genomes (genotypes), and phenotypes of creatures in NEAT."""
+
 from collections import OrderedDict
 
-from neat.graph import Node, Sensor, Hidden, Output, Connection, Graph, Verbosity
+from neat.graph import Node, Sensor, Hidden, Output, Connection, Graph
 
 class Gene:
     """Represents a single gene of a creature.
@@ -24,7 +26,7 @@ class Gene:
 
     def copy(self):
         """Make a copy of this gene.
-        
+
         Returns: the copy of this gene.
         """
         copy = Gene(self.allele.copy())
@@ -33,6 +35,14 @@ class Gene:
 
     @property
     def innovation_number(self):
+        """Get the innovation number of the gene.
+
+        The innovation number of a gene is its historical marking and whenever a new, unique gene
+        is created (usually through mutation), the innovation number increases. This also means
+        that same genes share the same innovation number.
+
+        Returns: the innovation number of the gene.
+        """
         try:
             Gene.pool[self] += 1
         except (KeyError, ValueError):
@@ -73,7 +83,8 @@ class Genome():
     """Represents a creature's genome (a set of genes)."""
 
     def __init__(self):
-        self.genes = []
+        self.nodes = []
+        self.connections = []
 
     def copy(self):
         """Make a copy of a genome.
@@ -81,20 +92,25 @@ class Genome():
         Returns: The copy of the genome.
         """
         copy = Genome()
-        copy.genes = [gene.copy() for gene in self.genes]
+        copy.nodes = [node.copy() for node in self.nodes]
+        copy.connections = [connection.copy() for connection in self.connections]
 
         return copy
-        
+
     def add_gene(self, gene):
         """Add a gene to the genome.
-        
+
         The innovation number of the gene is also set in this method.
 
         Arguments:
             gene: The gene to be added to the genome.
         """
-        gene.allele.id = len(self.genes)
-        self.genes.append(gene)
+        if isinstance(gene.allele, Node):
+            self.nodes.append(gene)
+            gene.allele.id = len(self.nodes)
+        else:
+            self.connections.append(gene)
+            gene.allele.id = len(self.connections)
 
     def add_genes(self, genes):
         """Add a list of genes to the genome.
@@ -105,18 +121,18 @@ class Genome():
         for gene in genes:
             self.add_gene(gene)
 
-    def get_phenome(self):
-        """Generate the phenome, or physical expression, of the genome.
+    def get_phenotype(self):
+        """Generate the phenotype, or physical expression, of the genome.
 
         Returns: a compiled computation graph.
         """
         graph = Graph()
 
-        for gene in self.genes:
-            if isinstance(gene.allele, Node):
-                graph.add_node(gene.allele)
-            else:
-                graph.add_connection(gene.allele)
+        for gene in self.nodes:
+            graph.add_node(gene.allele)
+
+        for gene in self.connections:
+            graph.add_connection(gene.allele)
 
         graph.compile()
 
