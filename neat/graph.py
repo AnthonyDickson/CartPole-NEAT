@@ -360,8 +360,6 @@ class Graph:
         for node_input in self.connections[node_id]:
             if node_input.target_id == other_id:
                 node_input.is_enabled = False
-                self.print('Disabling input from %s to %s.' % \
-                    (node_input.origin_id, node_input.target_id))
 
         # Disabling a connection may break the graph so we force the graph to be compiled again to
         # enforce a re-run of sanity and validity checks.
@@ -395,7 +393,6 @@ class Graph:
             network_output.append(self._compute_output(output))
 
         output = Activations.softmax(network_output) if self.outputs else network_output
-        self.print('Network output: %s' % output)
 
         return output
 
@@ -409,28 +406,22 @@ class Graph:
 
         Returns: the output of the node.
         """
-        self.print('%s%s Computing...' % ('\t' * level, node_id))
-
         node = self.nodes[node_id]
 
-        node_output = node.output if isinstance(node, Sensor) else node.bias
+        node_output = node.output if node.id in self.sensors else node.bias
 
         for input_connection in self.connections[node_id]:
             target = self.nodes[input_connection.target_id]
 
             if not input_connection.is_enabled:
-                self.print('%s%s Input from this node is disabled!' % \
-                    ('\t' * (level + 1), input_connection.target_id))
+                continue
             elif input_connection.is_recurrent:
                 node_output += input_connection.weight * target.prev_output
-                self.print('%s%s Output (recurrent): %f' % \
-                    ('\t' * (level + 1), input_connection.target_id, target.prev_output))
             else:
                 node_output += input_connection.weight * \
                     self._compute_output(input_connection.target_id, level=level + 1)
 
         node.output = node.activation(node_output)
-        self.print('%s%s Output: %f' % ('\t' * level, node, node.output))
 
         return node.output
 
@@ -440,13 +431,17 @@ class Graph:
             for input_connection in self.connections[node_id]:
                 print(input_connection)
 
-    def print(self, msg, verbosity=Verbosity.MINIMAL):
+    def print(self, msg, format_args=None, verbosity=Verbosity.MINIMAL):
         """Print a message whose visibility is controlled by the verbosity of the message and
         the graphs verbosity setting.
 
         Arguments:
             msg: The string to print.
+            format_args: any arguments needed for string formatting.
             verbosity: The verbosity of the message to print.
         """
         if self.verbosity.value >= verbosity.value:
-            print(msg)
+            if format_args:
+                print(msg % format_args)
+            else:
+                print(msg)
