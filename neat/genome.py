@@ -1,6 +1,6 @@
 """Implements a basic model of genes, genomes (genotypes), and phenotypes of creatures in NEAT."""
 
-from neat.graph import Graph
+from neat.graph import Graph, Connection
 
 class Gene:
     """Represents a single gene of a creature.
@@ -12,26 +12,25 @@ class Gene:
 class NodeGene(Gene):
     """Represents a node gene."""
 
-    def __init__(self, node_type):
+    def __init__(self, node):
         """Create a node gene.
 
         Arguments:
-            node_type: the type of node this gene represents.
+            node: the node this gene represents.
         """
-        self.node_type = node_type
-        self.bias = 0
+        self.node = node
 
     def copy(self):
         """Make a copy of this gene.
 
         Returns: the copy of this gene.
         """
-        copy = NodeGene(self.node_type)
+        copy = NodeGene(self.node.copy())
 
         return copy
 
     def __str__(self):
-        return 'Gene_Node(%d)' % self.node_type.__name__
+        return 'Gene_Node(%s)' % self.node
 
     def __eq__(self, other):
         try:
@@ -43,17 +42,14 @@ class ConnectionGene(Gene):
     """Represents a connection gene."""
     pool = {}
 
-    def __init__(self, input_node_id, output_node_id):
+    def __init__(self, origin_id, target_id):
         """Create a connection gene.
 
         Arguments:
-            input_node_id: the id of the node that provides the input.
-            output_node_id: the id of the node that receives the input.
+            origin_id: the id of the node that receives the input.
+            target_id: the id of the node that provides the input.
         """
-        self.input_node_id = input_node_id
-        self.output_node_id = output_node_id
-        self.weight = 0
-        self.is_disabled = False
+        self.connection = Connection(origin_id, target_id)
 
         try:
             self.innovation_number = ConnectionGene.pool[self]
@@ -66,33 +62,27 @@ class ConnectionGene(Gene):
 
         Returns: the copy of this gene.
         """
-        copy = ConnectionGene(self.input_node_id, self.output_node_id)
-
-        copy.is_disabled = self.is_disabled
+        copy = ConnectionGene(0, 0)
+        copy.connection = self.connection.copy()
         copy.innovation_number = self.innovation_number
 
         return copy
 
     def __str__(self):
-        return 'Gene_Connection(%s->%s)' % (self.input_node_id, self.output_node_id)
+        return 'Gene_Connection(%s)' % self.connection
 
     def __eq__(self, other):
-        return self.input_node_id == other.input_node_id and \
-            self.output_node_id == other.output_node_id
+        return self.connection == other.connection
 
     def __hash__(self):
-        hash_code = 7
-        hash_code += hash_code * self.input_node_id % 17
-        hash_code += hash_code * self.output_node_id % 37
+        return hash(self.connection)
 
-        return hash_code
-
-class Genome():
+class Genome:
     """Represents a creature's genome (a set of genes)."""
 
     def __init__(self):
-        self.nodes = []
-        self.connections = []
+        self.node_genes = []
+        self.connection_genes = []
 
     def copy(self):
         """Make a copy of a genome.
@@ -100,8 +90,9 @@ class Genome():
         Returns: The copy of the genome.
         """
         copy = Genome()
-        copy.nodes = [node.copy() for node in self.nodes]
-        copy.connections = [connection.copy() for connection in self.connections]
+        copy.node_genes = [node_gene.copy() for node_gene in self.node_genes]
+        copy.connection_genes = [connection_gene.copy() \
+            for connection_gene in self.connection_genes]
 
         return copy
 
@@ -114,9 +105,9 @@ class Genome():
             gene: The gene to be added to the genome.
         """
         if isinstance(gene, NodeGene):
-            self.nodes.append(gene)
+            self.node_genes.append(gene)
         else:
-            self.connections.append(gene)
+            self.connection_genes.append(gene)
 
     def add_genes(self, genes):
         """Add a list of genes to the genome.
@@ -138,16 +129,13 @@ class Phenotype(Graph):
         """
         super().__init__()
 
-        for gene in genome.nodes:
-            node = gene.node_type()
-            node.id = genome.nodes.index(gene)
+        for node_gene in genome.node_genes:
+            node = node_gene.node
+            node.id = genome.node_genes.index(node_gene)
 
             self.add_node(node)
 
-        for gene in genome.connections:
-            if gene.is_disabled:
-                continue
-
-            self.add_input(gene.output_node_id, gene.input_node_id)
+        for connection_gene in genome.connection_genes:
+            self.add_connection(connection_gene.connection)
 
         self.compile()

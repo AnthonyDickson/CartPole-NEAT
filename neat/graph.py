@@ -130,6 +130,12 @@ class Connection:
     count = 0  # a count of unique nodes
 
     def __init__(self, origin_id, target_id):
+        """Create a connection between nodes.
+
+        Arguments:
+            origin_id: The id of the node that receives the input.
+            target_id: The id of the node that provides the input.
+        """
         self.origin_id = origin_id
         self.target_id = target_id
         self.weight = random.gauss(0, 1)
@@ -157,6 +163,17 @@ class Connection:
     def __str__(self):
         return 'Connection_{}->{}'.format(self.origin_id, self.target_id) + \
             (' (recurrent)' if self.is_recurrent else '')
+
+    def __eq__(self, other):
+        return self.origin_id == other.origin_id and \
+            self.target_id == other.target_id
+
+    def __hash__(self):
+        hash_code = 7
+        hash_code += hash_code * self.origin_id % 17
+        hash_code += hash_code * self.target_id % 37
+
+        return hash_code
 
 class Verbosity(Enum):
     """An enum capturing different verbosity levels for logging."""
@@ -231,7 +248,7 @@ class Graph:
             has_path_to_input |= self._has_path_to_input(output)
 
         if not has_path_to_input:
-            raise InvalidGraphError('Graph needs at least one sensor (input) to be connected' + \
+            raise InvalidGraphError('Graph needs at least one sensor (input) to be connected ' + \
                 'to an output.')
 
         self.is_compiled = True
