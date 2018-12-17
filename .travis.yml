@@ -13,6 +13,6 @@ install:
   - conda info -a
 
   - conda env create -f neat/environment.yml
-  - source activate cartpole-neat
+  - source activate neat
 script:
   - ./test_suite.sh
