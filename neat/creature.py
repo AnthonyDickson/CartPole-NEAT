@@ -45,6 +45,8 @@ class Creature:
 
         self.genotype = genome
         self.phenotype = Phenotype(genome)
+        self.fitness = 0
+        self.species = None
 
     def copy(self):
         """Make a copy of a creature.
