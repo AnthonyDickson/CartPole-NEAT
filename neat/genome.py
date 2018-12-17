@@ -118,6 +118,16 @@ class Genome:
         for gene in genes:
             self.add_gene(gene)
 
+    def __len__(self):
+        """Get the length of the genome.
+
+        The length is simply the number of node genes plus the number of
+        connection genes.
+
+        Returns: the length of the genome.
+        """
+        return len(self.node_genes) + len(self.connection_genes)
+
 class Phenotype(Graph):
     """A phenotype, or physical expression, of a genome (genotype)."""
 
