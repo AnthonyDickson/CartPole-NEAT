@@ -1,83 +1,91 @@
 """Implements a basic model of genes, genomes (genotypes), and phenotypes of creatures in NEAT."""
 
-from collections import OrderedDict
-
-from neat.graph import Node, Sensor, Hidden, Output, Connection, Graph
+from neat.graph import Graph
 
 class Gene:
     """Represents a single gene of a creature.
 
-    A gene may be any type of node (sensor, hidden, or output), or a connection.
-    Genes also have an innovation number, which is assigned by the genome.
+    This stub is here simply to provide a sensible hierarchy for NodeGene and ConnectionGene.
     """
+    pass
 
-    # Gene pool keeps track of unique genes, and is used to determine the innovation number of a
-    # gene.
-    pool = OrderedDict()
+class NodeGene(Gene):
+    """Represents a node gene."""
 
-    def __init__(self, allele):
-        """Create a gene.
+    def __init__(self, node_type):
+        """Create a node gene.
 
         Arguments:
-            allele: The thing that this gene will represent. In this implementation, it should
-            be a node or connection object.
+            node_type: the type of node this gene represents.
         """
-        self.allele = allele
+        self.node_type = node_type
+        self.bias = 0
 
     def copy(self):
         """Make a copy of this gene.
 
         Returns: the copy of this gene.
         """
-        copy = Gene(self.allele.copy())
+        copy = NodeGene(self.node_type)
 
         return copy
 
-    @property
-    def innovation_number(self):
-        """Get the innovation number of the gene.
-
-        The innovation number of a gene is its historical marking and whenever a new, unique gene
-        is created (usually through mutation), the innovation number increases. This also means
-        that same genes share the same innovation number.
-
-        Returns: the innovation number of the gene.
-        """
-        try:
-            Gene.pool[self] += 1
-        except (KeyError, ValueError):
-            Gene.pool[self] = 1
-
-        return list(Gene.pool).index(self) + 1
-
-    def __hash__(self):
-        """Get the hash of the gene.
-
-        The hash code is in the interval [1, 3] if the gene is a node gene. Otherwise, a hash
-        code is generated based on the connection parameters origin_id and target_id.
-        The hash function is set up so collisions DO happen. This is bevause the hash function
-        is used to check similarity between genes.
-
-        Returns: the generated hash code.
-        """
-        if isinstance(self.allele, Node):
-            return self.allele.id
-        else:  # allele must be a connection gene.
-            # Set initial hash code for connection to a large number to avoid collisions.
-            # This works if the hash of a node gene is just its id (a count of unique nodes)
-            # and the number of nodes is always less than this large number.
-            hash_code = 123456789
-            hash_code += self.allele.origin_id
-            hash_code *= self.allele.target_id
-            hash_code += 1 if self.allele.is_recurrent else 0
-
-            return hash_code
+    def __str__(self):
+        return 'Gene_Node(%d)' % self.node_type.__name__
 
     def __eq__(self, other):
-        return hash(self) == hash(other)
+        try:
+            return self.__name__ == other.__name__
+        except AttributeError:
+            return False
 
-    def __repr__(self):
-        return 'Gene %d (%s)' % (self.innovation_number, self.allele)
+class ConnectionGene(Gene):
+    """Represents a connection gene."""
+    pool = {}
+
+    def __init__(self, input_node_id, output_node_id):
+        """Create a connection gene.
+
+        Arguments:
+            input_node_id: the id of the node that provides the input.
+            output_node_id: the id of the node that receives the input.
+        """
+        self.input_node_id = input_node_id
+        self.output_node_id = output_node_id
+        self.weight = 0
+        self.is_disabled = False
+
+        try:
+            self.innovation_number = ConnectionGene.pool[self]
+        except KeyError:
+            self.innovation_number = len(ConnectionGene.pool)
+            ConnectionGene.pool[self] = self.innovation_number
+
+    def copy(self):
+        """Make a copy of this gene.
+
+        Returns: the copy of this gene.
+        """
+        copy = ConnectionGene(self.input_node_id, self.output_node_id)
+
+        copy.is_disabled = self.is_disabled
+        copy.innovation_number = self.innovation_number
+
+        return copy
+
+    def __str__(self):
+        return 'Gene_Connection(%s->%s)' % (self.input_node_id, self.output_node_id)
+
+    def __eq__(self, other):
+        return self.input_node_id == other.input_node_id and \
+            self.output_node_id == other.output_node_id
+
+    def __hash__(self):
+        hash_code = 7
+        hash_code += hash_code * self.input_node_id % 17
+        hash_code += hash_code * self.output_node_id % 37
+
+        return hash_code
 
 class Genome():
     """Represents a creature's genome (a set of genes)."""
@@ -105,12 +113,10 @@ class Genome():
         Arguments:
             gene: The gene to be added to the genome.
         """
-        if isinstance(gene.allele, Node):
+        if isinstance(gene, NodeGene):
             self.nodes.append(gene)
-            gene.allele.id = len(self.nodes)
         else:
             self.connections.append(gene)
-            gene.allele.id = len(self.connections)
 
     def add_genes(self, genes):
         """Add a list of genes to the genome.
@@ -121,19 +127,27 @@ class Genome():
         for gene in genes:
             self.add_gene(gene)
 
-    def get_phenotype(self):
-        """Generate the phenotype, or physical expression, of the genome.
+class Phenotype(Graph):
+    """A phenotype, or physical expression, of a genome (genotype)."""
 
-        Returns: a compiled computation graph.
+    def __init__(self, genome):
+        """Generate the phenotype, or physical expression, of a genome.
+
+        Arguments:
+            genome: the genome to express.
         """
-        graph = Graph()
+        super().__init__()
 
-        for gene in self.nodes:
-            graph.add_node(gene.allele)
+        for gene in genome.nodes:
+            node = gene.node_type()
+            node.id = genome.nodes.index(gene)
 
-        for gene in self.connections:
-            graph.add_connection(gene.allele)
+            self.add_node(node)
 
-        graph.compile()
+        for gene in genome.connections:
+            if gene.is_disabled:
+                continue
 
-        return graph
+            self.add_input(gene.output_node_id, gene.input_node_id)
+
+        self.compile()
