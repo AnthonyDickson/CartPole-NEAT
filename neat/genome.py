@@ -127,6 +127,49 @@ class Genome:
         for gene in genes:
             self.add_gene(gene)
 
+    def align_genes(self, other_genotype):
+        """Find the aligned, disjoint, and excess genes of two genotypes.
+
+        Arguments:
+            other_genotype: the genotype to align with.
+
+        Returns: a 3-tuple where the elements are a list of aligned genes,
+                 disjoint genes, and excess genes. The aligned genes element
+                 itself is also a tuple which contains the pairs of aligned
+                 genes.
+        """
+        genes = self.connection_genes
+        other_genes = other_genotype.connection_genes
+
+        min_gene_length = min(len(genes), len(other_genes))
+
+        max_innovation_number = max([gene.innovation_number for gene in genes])
+        other_max_innovation_number = max([gene.innovation_number for gene in other_genes])
+        excess_threshold = min(max_innovation_number, other_max_innovation_number)
+
+        aligned_genes = []
+        disjoint_genes = []
+        excess_genes = []
+
+        for i in range(min_gene_length):
+            innovation_number = genes[i].innovation_number
+            other_innovation_number = other_genes[i].innovation_number
+
+            if innovation_number == other_innovation_number:
+                aligned_genes.append((genes[i], other_genes[i]))
+            else:
+                if innovation_number <= excess_threshold:
+                    disjoint_genes.append(genes[i])
+                else:
+                    excess_genes.append(genes[i])
+
+                if other_innovation_number <= excess_threshold:
+                    disjoint_genes.append(other_genes[i])
+                else:
+                    excess_genes.append(other_genes[i])
+
+        return aligned_genes, disjoint_genes, excess_genes
+
     def __len__(self):
         """Get the length of the genome.
 

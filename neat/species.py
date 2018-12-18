@@ -116,6 +116,10 @@ class Species:
     species_count = 0
     name_generator = None
 
+    # The distance threshold used when deciding if two creatures should
+    # belong in the same species or not.
+    compatibility_threshold = 3.0
+
     @staticmethod
     @property
     def next_id():
@@ -147,11 +151,14 @@ class Species:
         """
         self.id = Species.next_id
         self.name = name if name != '' else Species.next_name
-        self.members = []
+        self.members = set()
         self.representative = None
 
     def __str__(self):
         return '%s (Species_%d)' % (self.name, self.id)
+
+    def __hash__(self):
+        return self.id
 
 if __name__ == '__main__':
     print(CodeNameGenerator().next())

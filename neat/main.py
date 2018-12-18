@@ -1,11 +1,11 @@
 """Implements the NEAT algorithm."""
 
-from functools import reduce
 from time import time
 
 import numpy as np
 
 from neat.creature import Creature
+from neat.species import Species
 
 class NeatAlgorithm:
     """An implementation of the NEAT algorithm based off the original paper."""
@@ -14,6 +14,7 @@ class NeatAlgorithm:
         self.env = env
         self.n_pops = n_pops
         self.population = self.init_population(env.observation_space.shape[0], env.action_space.n)
+        self.species = set()
 
     def init_population(self, n_inputs, n_outputs):
         """Create a population of n individuals.
@@ -44,6 +45,12 @@ class NeatAlgorithm:
         """
         sim_start = time()
 
+        step_msg_format = \
+            "{:03d}/{:03d} - steps: {:02d} - step time {:02.4f}s"
+
+        episode_complete_msg_format = "{:03d}/{:03d} - avg. steps: {:.2f} "\
+            "- avg. step time: {:02.4f}s - avg. fitness: {:.4f} - total time: {:02.2f}s"
+
         for episode in range(n_episodes):
             step_history = []
             episode_start = time()
@@ -61,152 +68,82 @@ class NeatAlgorithm:
                     if done:
                         creature.fitness = step + 1
                         step_history.append(step + 1)
-                        print("{:03d}/{:03d} - steps: {:02d} - step time {:02.4f}s".format(\
+                        print(step_msg_format.format(\
                             pop_i + 1, self.n_pops, step + 1, time() - pop_start), end='\r')
 
                         break
                 else:
                     creature.fitness = n_steps
 
-            species = self.speciate()
-
-            for creature in self.population:
-                self.fitness(creature, species)
+            self.process_episode()
 
             avg_fitness = sum(c.fitness for c in self.population) / self.n_pops
 
             avg_steps = np.mean(step_history)
             total_episode_time = time() - episode_start
             avg_step_time = total_episode_time / self.n_pops
-            print("{:03d}/{:03d} - avg. steps: {:.2f} - avg. step time: {:02.4f}s - "\
-                "avg. fitness: {:.4f} - total time: {:02.2f}s".format(self.n_pops, \
+
+            print(episode_complete_msg_format.format(self.n_pops, \
                     self.n_pops, avg_steps, avg_step_time, total_episode_time, avg_fitness))
 
         print('Total run time: {:.2f}s - avg. steps: {:.2f} - best steps: {}'.format(\
             time() - sim_start, np.mean(step_history), np.max(step_history)))
         print()
 
-    def distance(self, creature, other_creature):
-        """Calculate the distance (or difference) between the genes of two
-        different creatures.
+    def process_episode(self):
+        """Do the post-episode stuff such as speciating, adjusting creature fitness,
+        crossover etc.
+        """
+        map(self.speciate, self.population)
+        map(self.adjust_fitness, self.population)
+        self.crossover(self.population)
+        map(self.mutate, self.population)
+
+    def speciate(self, creature):
+        """Place a creature into a species, or create a new species if no
+        suitable species exists.
 
         Arguments:
-            creature: the first creature to compare.
-            other_creature: the other creature to compare.
-
-        Returns: the distance between the two creatures' genes.
-        """ 
-        c1 = 1.0
-        c2 = 1.0
-        c3 = 1.0
-        N = max(len(creature.genotype), len(other_creature.genotype))
-        aligned, disjoint, excess = self.gene_alignment(creature, other_creature)
-        
-        avg_w_diff = 0
-
-        for conn1, conn2 in aligned:
-            avg_w_diff += conn1.connection.weight - conn2.connection.weight
-        
-        avg_w_diff /= len(aligned)
-
-        return c1 * len(disjoint) / N + c2 * len(excess) / N + c3 * abs(avg_w_diff)
-
-    def gene_alignment(self, creature, other_creature):
-        """Find the aligned, disjoint, and excess genes of two creatures.
-
-        Arguments:
-            creature: the first creature to compare.
-            other_creature: the other creature to compare.
-
-        Returns: a 3-tuple where the elements are a list of aligned genes, 
-                 disjoint genes, and excess genes.
+            creature: the creature to place into a species.
         """
-        conn1 = creature.genotype.connection_genes
-        conn2 = other_creature.genotype.connection_genes
+        for species_i in self.species:
+            if creature.distance(species_i.representative) < Species.compatibility_threshold:
+                species_i.add(creature)
+                creature.species = species_i
 
-        n = min(len(conn1), len(conn2))
-        N = max(len(conn1), len(conn2))
-
-        creature_max_innovation = max(conn1, key=lambda c: c.innovation_number).innovation_number
-        other_max_innovation = max(conn2, key=lambda c: c.innovation_number).innovation_number
-        threshold = min(creature_max_innovation, other_max_innovation)
-        aligned_genes = []
-        disjoint_genes = []
-        excess_genes = []
-
-        for i in range(n):
-            if conn1[i].innovation_number != conn2[i].innovation_number:
-                if conn1[i].innovation_number <= threshold:
-                    disjoint_genes.append(conn1[i])  
-                else:
-                    excess_genes.append(conn1[i])
-                if conn2[i].innovation_number <= threshold: 
-                    disjoint_genes.append(conn2[i])
-                else:
-                    excess_genes.append(conn2[i]) 
-            else:
-                aligned_genes.append((conn1[i], conn2[i]))
-
-        return aligned_genes, disjoint_genes, excess_genes
-
-    def speciate(self):
-        """Partition population into species.
-        
-        Returns: a dictionary where the keys are the species and the values 
-                 are creatures in a given species.
-        """
-        species = {}
-
-        for creature in self.population:
-            for s in species:
-                if self.distance(creature, species[s][0]) < 10:
-                    species[s].append(creature)
-                    creature.species = s
-
-                    break
-            else:
-                creature.species = len(species)
-                species[len(species)] = [creature]
-
-        return species
-
-    def fitness(self, speciated_creature, species, in_place=True):
-        """Calculate the adjusted fitness score for a creature.
-
-        Arguments:
-            speciated_creature: the creature that has been assigned a species.
-            species: the dictionary of species.
-            in_place: whether to assign the fitness score directly or to return it.
-
-        Returns: the fitness score for the given creature if in_place is True,
-                 otherwise None.
-        """
-        adjusted_fitness = speciated_creature.fitness / len(species[speciated_creature.species])
-
-        if in_place:
-            speciated_creature.fitness = adjusted_fitness
+                break
         else:
-            return adjusted_fitness
+            new_species = Species()
+            new_species.members.add(creature)
+            new_species.representative = creature
+            self.species.add(new_species)
+            creature.species = new_species
+
+    def adjust_fitness(self, creature):
+        """Update the creature's fitness with the adjusted (shared) fitness.
+
+        Arguments:
+            creature: the creature whose fitness should be adjusted. The
+                      creature must be already speciated.
+        """
+        adjusted_fitness = creature.fitness / len(creature.species)
+        creature.fitness = adjusted_fitness
 
     def crossover(self, speciated_population):
         """Perform crossover on the population.
 
         Arguments:
-            speciated_population: the population after it has been partitioned 
+            speciated_population: the population after it has been partitioned
             into species.
-        
+
         Returns: the new population.
         """
         pass
 
-    def mutate(self, creature, in_place=True):
+    def mutate(self, creature):
         """Mutate the given creature's genotype.
 
         Arguments:
             creature: the creature to be mutated.
-            in_place: whether to modify the creature directly or to modify a 
-                      copy of the creature.
-
-        Returns: None if in_place is True, otherwise returns the mutated copy.
         """
         pass
