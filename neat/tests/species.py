@@ -5,7 +5,7 @@ import random
 import re
 import unittest
 
-from neat.species import NameGenerator, UbuntuCodeName
+from neat.species import CodeNameGenerator
 
 class NameGenerationUnitTest(unittest.TestCase):
     """Test cases for the name generation code in the species module."""
@@ -24,16 +24,19 @@ class NameGenerationUnitTest(unittest.TestCase):
         ]
 
         for test_string, expected in tests:
-            actual = NameGenerator.process(test_string)
+            actual = CodeNameGenerator.process(test_string)
             self.assertEqual(actual, expected, \
                 'Expected %s, but got %s.' % (expected, actual))
 
     def test_loads_from_file(self):
-        """Attempt to intialise a UbuntuCodeName name generator.
+        """Attempt to intialise a CodeNameGenerator name generator.
 
         Success if no errors raised and things are loaded correctly.
         """
-        name_gen = UbuntuCodeName(NameGenerationUnitTest.data_path)
+        self.assertRaises(FileNotFoundError, \
+            lambda: CodeNameGenerator(data_path='apaththatdoesntexist'))
+
+        name_gen = CodeNameGenerator(NameGenerationUnitTest.data_path)
 
         self.assertGreater(len(name_gen.adjectives), 0)
         self.assertGreater(len(name_gen.nouns), 0)
@@ -43,9 +46,10 @@ class NameGenerationUnitTest(unittest.TestCase):
 
         Success if generated names a in correct format and can generate n names consecutively.
         """
-        name_gen = UbuntuCodeName(NameGenerationUnitTest.data_path)
+        name_gen = CodeNameGenerator(NameGenerationUnitTest.data_path)
 
-        capitalised_words = re.compile(r"^([A-Z][a-z]+('s)?[\s-])+([A-Z][a-zíñó]+)$")
+        word = r"[A-Z][a-zíñó]+"
+        capitalised_words = re.compile(r"^({word}('s)?[\s-])+({word})$".format(word=word))
 
         for _ in range(10000):
             name = name_gen.next()

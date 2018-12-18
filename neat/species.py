@@ -3,55 +3,7 @@
 import random
 import re
 
-class NameGenerator:
-    """Generates names."""
-
-    def next(self):
-        """Gets the next name.
-
-        Returns: the next name.
-        """
-        raise NotImplementedError
-
-    @staticmethod
-    def process(line):
-        """Process a line and make it ready for use.
-
-        Returns: the line, stripped of trailing whitespace and all words capitalised.
-        """
-        line = line.strip()
-        line = NameGenerator.capitalise_hyphened(line)
-
-        return line
-
-    @staticmethod
-    def capitalise(string):
-        """Capitalise the words in the string.
-
-        Note: does not capitalise words that are separated with hyphens or other separators.
-
-        Returns: the string, with all words capitalised.
-        """
-        return ' '.join([word.capitalize() for word in string.split()])
-
-    @staticmethod
-    def capitalise_hyphened(string):
-        """Capitalise the words in the string, including words separated by hyphens.
-
-        Returns: the string, with all words capitalised.
-        """
-        capitalised = []
-
-        for s in string.split():
-            if not '-' in s:
-                capitalised.append(s.capitalize())
-            else:
-                fixed = '-'.join([word.capitalize() for word in s.split('-')])
-                capitalised.append(fixed)
-
-        return ' '.join(capitalised)
-
-class UbuntuCodeName(NameGenerator):
+class CodeNameGenerator:
     """Generates a random name based on adjectives and nouns used in,
     and proposed for Ubuntu release code names.
 
@@ -60,6 +12,10 @@ class UbuntuCodeName(NameGenerator):
 
     Sourced from https://wiki.ubuntu.com/DevelopmentCodeNames
     """
+
+    marker_pattern = re.compile(r"^\[[A-Za-z]\]$")
+    key_pattern = re.compile(r"^\[([A-Za-z])\]$")
+    comment_pattern = re.compile(r"^#.*")
 
     def __init__(self, data_path='neat/data/ubuntu/', adjective_file='adjectives.txt', \
             noun_file='nouns.txt'):
@@ -79,22 +35,18 @@ class UbuntuCodeName(NameGenerator):
             adjective_files: the name of the file that contains the adjectives.
             noun_file: the name of the file that contains the animal names.
         """
-        try:
-            filepath = data_path + adjective_file
+        filepath = data_path + adjective_file
 
-            with open(filepath, 'r') as f:
-                self.adjectives = self.make_dict(f)
+        with open(filepath, 'r') as file:
+            self.adjectives = CodeNameGenerator.make_dict(file)
 
-            filepath = data_path + noun_file
+        filepath = data_path + noun_file
 
-            with open(filepath, 'r') as f:
-                self.nouns = self.make_dict(f)
-        except FileNotFoundError as e:
-            self.adjectives = {}
-            self.nouns = {}
-            print(e)
+        with open(filepath, 'r') as file:
+            self.nouns = CodeNameGenerator.make_dict(file)
 
-    def make_dict(self, file):
+    @staticmethod
+    def make_dict(file):
         """Read a data file and generate a dictionary from it.
 
         Arguments:
@@ -105,18 +57,14 @@ class UbuntuCodeName(NameGenerator):
         word_dict = {}
         curr_key = ''
 
-        marker_pattern = re.compile(r"^\[[A-Za-z]\]$")
-        key_pattern = re.compile(r"^\[([A-Za-z])\]$")
-        comment_pattern = re.compile(r"^#.*")
-
         for line in file:
-            if re.match(comment_pattern, line):
+            line = CodeNameGenerator.process(line)
+
+            if re.match(CodeNameGenerator.comment_pattern, line):
                 continue
 
-            line = NameGenerator.process(line)
-
-            if re.match(marker_pattern, line):
-                result = re.search(key_pattern, line)
+            if re.match(CodeNameGenerator.marker_pattern, line):
+                result = re.search(CodeNameGenerator.key_pattern, line)
                 key = result.group(1)
                 word_dict[key] = []
                 curr_key = key
@@ -124,6 +72,33 @@ class UbuntuCodeName(NameGenerator):
                 word_dict[curr_key].append(line)
 
         return word_dict
+
+    @staticmethod
+    def process(line):
+        """Process a line and make it ready for use.
+
+        Returns: the line, stripped of trailing whitespace and all words capitalised.
+        """
+        line = line.strip()
+        line = CodeNameGenerator.capitalise(line)
+
+        return line
+
+    @staticmethod
+    def capitalise(string):
+        """Capitalise the words in the string.
+
+        Returns: the string, with all words capitalised.
+        """
+        return ' '.join(map(CodeNameGenerator.capitalise_hyphened, string.split()))
+
+    @staticmethod
+    def capitalise_hyphened(string):
+        """Capitalise the string, including words separated by hyphens.
+
+        Returns: the string, with all words capitalised.
+        """
+        return '-'.join(map(str.capitalize, string.split('-')))
 
     def next(self):
         """Gets the next name.
@@ -160,7 +135,7 @@ class Species:
         Returns: a name.
         """
         if Species.name_generator is None:
-            Species.name_generator = UbuntuCodeName()
+            Species.name_generator = CodeNameGenerator()
 
         return Species.name_generator.next()
 
@@ -179,4 +154,4 @@ class Species:
         return '%s (Species_%d)' % (self.name, self.id)
 
 if __name__ == '__main__':
-    print(UbuntuCodeName().next())
+    print(CodeNameGenerator().next())
