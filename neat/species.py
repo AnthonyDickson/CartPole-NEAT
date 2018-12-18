@@ -151,6 +151,13 @@ class Species:
         self.name = name if name != '' else Species.next_name()
         self.members = set()
         self.representative = None
+        self.alloted_offspring_quota = 0
+        self.champion = None
+
+    @property
+    def mean_fitness(self):
+        """The mean fitness of the entire species."""
+        return sum([creature.fitness for creature in self.members]) / len(self.members)
 
     def add(self, creature):
         """Add a creature to the species.
@@ -159,6 +166,29 @@ class Species:
             creature: the creature to be added to the species.
         """
         self.members.add(creature)
+
+    def cull_the_weak(self, how_many):
+        """Cull the Weak
+        Increase damage against Slowed or Chilled enemies by 20%.
+
+        "I'll show you the same mercy you showed my helpless family." —Tyla Shrikewing
+
+        Unlocked at level 20
+
+        Arguments:
+            how_many: the ratio of creatures to kill off.
+
+        Returns: the survivors.
+        """
+        ranked = list(sorted(self.members))
+        # The champion is the last in the list because the creatures are
+        # ranked in order of increasing fitness.
+        self.champion = ranked[-1]
+        num_to_kill = int(how_many * len(ranked))
+        self.members = set(ranked[num_to_kill:])
+        self.representative = random.choice(self.members)
+
+        return list(self.members)
 
     def __str__(self):
         return '%s (Species_%d)' % (self.name, self.id)

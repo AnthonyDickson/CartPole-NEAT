@@ -10,6 +10,9 @@ from neat.species import Species
 class NeatAlgorithm:
     """An implementation of the NEAT algorithm based off the original paper."""
 
+    # Percentage of each species that is allowed to reproduce.
+    survival_threshold = 0.3
+
     def __init__(self, env, n_pops=150):
         self.env = env
         self.n_pops = n_pops
@@ -100,7 +103,9 @@ class NeatAlgorithm:
         for creature in self.population:
             self.adjust_fitness(creature)
 
-        self.crossover(self.population)
+        self.allot_offspring_quota()
+        self.selection()
+        self.crossover()
 
         for creature in self.population:
             self.mutate(creature)
@@ -136,15 +141,32 @@ class NeatAlgorithm:
         adjusted_fitness = creature.fitness / len(creature.species)
         creature.fitness = adjusted_fitness
 
-    def crossover(self, speciated_population):
-        """Perform crossover on the population.
-
-        Arguments:
-            speciated_population: the population after it has been partitioned
-            into species.
-
-        Returns: the new population.
+    def allot_offspring_quota(self):
+        """Allot the number of offspring each species is allowed for the
+        current generation.
         """
+        species_mean_fitness = [species.mean_fitness for species in self.species]
+        sum_mean_species_fitness = sum(species_mean_fitness)
+
+        for species, mean_fitness in zip(self.species, species_mean_fitness):
+            species.alloted_offspring_quota = mean_fitness / sum_mean_species_fitness * self.n_pops
+
+    def selection(self):
+        """Perform selection on the population.
+
+        Species champions (the fittest creature in a species) are carried over
+        to the next generation (elitism).
+        """
+        new_population = []
+
+        for species in self.species:
+            survivors = species.cull_the_weak(NeatAlgorithm.survival_threshold)
+            new_population += survivors
+
+        self.population = new_population
+
+    def crossover(self):
+        """Perform crossover on the population."""
         pass
 
     def mutate(self, creature):

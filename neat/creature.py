@@ -127,3 +127,14 @@ class Creature:
                  genes.
         """
         return self.genotype.align_genes(other_creature.genotype)
+
+    def __cmp__(self, other_creature):
+        if self.fitness < other_creature.fitness:
+            return -1
+        elif self.fitness > other_creature.fitness:
+            return 1
+        else:
+            return 0
+
+    def __lt__(self, other_creature):
+        return self.__cmp__(other_creature) < 0
