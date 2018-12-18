@@ -1,7 +1,7 @@
 import sys
 import unittest
 
-from neat.tests import graph, genome
+from neat.tests import graph, genome, species
 
 def main():
     loader = unittest.TestLoader()
@@ -9,6 +9,7 @@ def main():
 
     suite.addTests(loader.loadTestsFromModule(graph))
     suite.addTests(loader.loadTestsFromModule(genome))
+    suite.addTests(loader.loadTestsFromModule(species))
 
     runner = unittest.TextTestRunner()
     result = runner.run(suite)
