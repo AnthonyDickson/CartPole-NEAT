@@ -94,10 +94,16 @@ class NeatAlgorithm:
         """Do the post-episode stuff such as speciating, adjusting creature fitness,
         crossover etc.
         """
-        map(self.speciate, self.population)
-        map(self.adjust_fitness, self.population)
+        for creature in self.population:
+            self.speciate(creature)
+
+        for creature in self.population:
+            self.adjust_fitness(creature)
+
         self.crossover(self.population)
-        map(self.mutate, self.population)
+
+        for creature in self.population:
+            self.mutate(creature)
 
     def speciate(self, creature):
         """Place a creature into a species, or create a new species if no
@@ -114,8 +120,9 @@ class NeatAlgorithm:
                 break
         else:
             new_species = Species()
-            new_species.members.add(creature)
+            new_species.add(creature)
             new_species.representative = creature
+
             self.species.add(new_species)
             creature.species = new_species
 

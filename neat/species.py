@@ -121,7 +121,6 @@ class Species:
     compatibility_threshold = 3.0
 
     @staticmethod
-    @property
     def next_id():
         """Get the next species id.
 
@@ -132,7 +131,6 @@ class Species:
         return Species.species_count
 
     @staticmethod
-    @property
     def next_name():
         """Get the next species name.
 
@@ -149,16 +147,34 @@ class Species:
         Arguments:
             name: The name of the species.
         """
-        self.id = Species.next_id
-        self.name = name if name != '' else Species.next_name
+        self.id = Species.next_id()
+        self.name = name if name != '' else Species.next_name()
         self.members = set()
         self.representative = None
+
+    def add(self, creature):
+        """Add a creature to the species.
+
+        Arguments:
+            creature: the creature to be added to the species.
+        """
+        self.members.add(creature)
 
     def __str__(self):
         return '%s (Species_%d)' % (self.name, self.id)
 
+    def __repr__(self):
+        return self.__str__()
+
     def __hash__(self):
         return self.id
+
+    def __len__(self):
+        """Get the 'length', or size of the species.
+
+        Returns: the number of member creatures in the species.
+        """
+        return len(self.members)
 
 if __name__ == '__main__':
     print(CodeNameGenerator().next())
