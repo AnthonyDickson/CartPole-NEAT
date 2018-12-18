@@ -42,13 +42,22 @@ class ConnectionGene(Gene):
     """Represents a connection gene."""
     pool = {}
 
-    def __init__(self, origin_id, target_id):
+    def __init__(self, origin_id=None, target_id=None):
         """Create a connection gene.
+
+        Creates a empty connection gene if either origin_id or target_id
+        are set to None.
 
         Arguments:
             origin_id: the id of the node that receives the input.
             target_id: the id of the node that provides the input.
         """
+        if origin_id is None or target_id is None:
+            self.connection = None
+            self.innovation_number = None
+
+            return
+
         self.connection = Connection(origin_id, target_id)
 
         try:
@@ -62,7 +71,7 @@ class ConnectionGene(Gene):
 
         Returns: the copy of this gene.
         """
-        copy = ConnectionGene(0, 0)
+        copy = ConnectionGene()
         copy.connection = self.connection.copy()
         copy.innovation_number = self.innovation_number
 
