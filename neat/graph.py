@@ -64,7 +64,8 @@ class Activations:
         Arguments:
             x: The list of values to modify.
 
-        Returns: a list of numbers in the interval [0, 1) representing a probability distribution.
+        Returns: a list of numbers in the interval [0, 1) representing a
+                 probability distribution.
         """
         z_exp = np.exp(x)
         return z_exp / z_exp.sum()
@@ -89,7 +90,8 @@ class Node:
         Returns: a copy of the node.
         """
         copy = self.__class__()
-        Node.count -= 1  # copies of nodes are not unique and therefore not counted.
+        # copies of nodes are not unique and therefore not counted.
+        Node.count -= 1
 
         copy.id = self.id
         copy.bias = self.bias
@@ -158,8 +160,8 @@ class Connection:
         Returns: the copy of the connection.
         """
         copy = Connection(self.origin_id, self.target_id)
-
-        Connection.count -= 1  # copies of connections are not unique and therefore not counted.
+        # copies of connections are not unique and therefore not counted.
+        Connection.count -= 1
         copy.id = self.id
         copy.weight = self.weight
         copy.is_enabled = self.is_enabled
@@ -191,23 +193,30 @@ class Verbosity(Enum):
 
 
 class InvalidGraphError(Exception):
-    """An error that occurs when a graph is tried to be compiled but it does not have a valid
-     structure."""
+    """An error that occurs when a graph is tried to be compiled but it does
+    not have a valid structure.
+    """
     pass
 
 
 class GraphNotCompiledError(Exception):
-    """An error that occurs when a graph is tried to be used but has not been compiled."""
+    """An error that occurs when a graph is tried to be used but has not
+    been compiled.
+    """
     pass
 
 
 class InvalidGraphInputError(Exception):
-    """An error that occurs when the input to a graph does not match the number of input nodes."""
+    """An error that occurs when the input to a graph does not match the number
+    of input nodes.
+    """
     pass
 
 
 class Graph:
-    """A computation graph for arbitrary neural networks that allows recurrent connections."""
+    """A computation graph for arbitrary neural networks that allows recurrent
+    connections.
+    """
 
     def __init__(self, verbosity=Verbosity.SILENT):
         """Initialise the graph.
@@ -236,8 +245,9 @@ class Graph:
             for connection in self.connections[i]:
                 copy.connections[i].append(connection.copy())
 
-        # If a graph is copied as-is, then it should still be compiled if the original was
-        # compiled, and not compiled if the other was not compiled.
+        # If a graph is copied as-is, then it should still be compiled if the
+        # original was compiled, and not compiled if the other was not
+        # compiled.
         copy.is_compiled = self.is_compiled
 
         return copy
@@ -248,7 +258,8 @@ class Graph:
         Throws: InvalidGraphError
         """
         if not self.sensors:
-            raise InvalidGraphError('Graph needs at least one sensor (input) node.')
+            raise InvalidGraphError('Graph needs at least one sensor (input)'
+                                    'node.')
 
         if not self.outputs:
             raise InvalidGraphError('Graph needs at least one output node.')
@@ -260,8 +271,8 @@ class Graph:
             has_path_to_input |= self._has_path_to_input(output)
 
         if not has_path_to_input:
-            raise InvalidGraphError('Graph needs at least one sensor (input) to be connected ' +
-                                    'to an output.')
+            raise InvalidGraphError('Graph needs at least one sensor (input) '
+                                    'to be connected to an output.')
 
         self.is_compiled = True
 
@@ -269,10 +280,12 @@ class Graph:
         """Mark recurrent connections (i.e. cycles) in the graph.
 
         Arguments:
-            node_id: the id (position in the nodes list) of the current node that is being
-                evaluated. This should initially be set to a terminal node (such as an output node).
-            visited: the list of visited nodes in the search. Can also be thought of the current
-                node's ancestor nodes. Initially this should be an empty set.
+            node_id: the id (position in the nodes list) of the current node
+                     that is being evaluated. This should initially be set
+                     to a terminal node (such as an output node).
+            visited: the list of visited nodes in the search. Can also be
+                     thought of the current node's ancestor nodes. Initially
+                     this should be an empty set.
         """
         if visited is None:
             visited = set()
@@ -283,17 +296,20 @@ class Graph:
             if input_connection.target_id in visited:
                 input_connection.is_recurrent = True
             else:
-                self._mark_recurrent_inputs(input_connection.target_id, visited.copy())
+                self._mark_recurrent_inputs(input_connection.target_id,
+                                            visited.copy())
 
     def _has_path_to_input(self, node_id, visited=None):
         """Check if the given node has a path to the input.
 
-        This is generally needed to check the the graph has at least one input connected to an
-        output.
+        This is generally needed to check the the graph has at least one
+        input connected to an output.
 
         Arguments:
-            node_id: the id of the node that should be checked for a path to an input node.
-            visited: the list of visited nodes in the search. Initially this should be an empty set.
+            node_id: the id of the node that should be checked for a path to
+                     an input node.
+            visited: the list of visited nodes in the search. Initially this
+                     should be an empty set.
 
         Returns: True if a path exists to an input node, False otherwise.
         """
@@ -303,9 +319,10 @@ class Graph:
         visited.add(node_id)
 
         for node_input in self.connections[node_id]:
-            if node_input.target_id not in visited and node_input.is_enabled:
-                if self._has_path_to_input(node_input.target_id, visited.copy()):
-                    return True
+            if node_input.target_id not in visited and node_input.is_enabled \
+                    and self._has_path_to_input(node_input.target_id,
+                                                visited.copy()):
+                return True
 
         return isinstance(self.nodes[node_id], Sensor)
 
@@ -322,8 +339,8 @@ class Graph:
         elif isinstance(node, Output):
             self.outputs.append(node.id)
 
-        # Adding a node may break the graph so we force the graph to be compiled again to enforce
-        # a re-run of sanity and validity checks.
+        # Adding a node may break the graph so we force the graph to be
+        # compiled again to enforce a re-run of sanity and validity checks.
         self.is_compiled = False
 
     def add_nodes(self, nodes):
@@ -343,8 +360,8 @@ class Graph:
         """
         self.connections[connection.origin_id].append(connection)
 
-        # Adding a connection may break the graph so we force the graph to be compiled again to
-        # enforce a re-run of sanity and validity checks.
+        # Adding a connection may break the graph so we force the graph to be
+        # compiled again to enforce a re-run of sanity and validity checks.
         self.is_compiled = False
 
     def add_input(self, node_id, other_id):
@@ -356,8 +373,8 @@ class Graph:
         """
         self.connections[node_id].append(Connection(node_id, other_id))
 
-        # Adding a connection may break the graph so we force the graph to be compiled again to
-        # enforce a re-run of sanity and validity checks.
+        # Adding a connection may break the graph so we force the graph to be
+        # compiled again to enforce a re-run of sanity and validity checks.
         self.is_compiled = False
 
     def disable_input(self, node_id, other_id):
@@ -373,8 +390,8 @@ class Graph:
             if node_input.target_id == other_id:
                 node_input.is_enabled = False
 
-        # Disabling a connection may break the graph so we force the graph to be compiled again to
-        # enforce a re-run of sanity and validity checks.
+        # Disabling a connection may break the graph so we force the graph to
+        # be compiled again to enforce a re-run of sanity and validity checks.
         self.is_compiled = False
 
     def compute(self, x):
@@ -386,12 +403,14 @@ class Graph:
         Returns: the softmax output of the neural network graph.
         """
         if not self.is_compiled:
-            raise GraphNotCompiledError('The graph must be compiled before being used, ' +
-                                        'or after a change occured to the graph structure.')
+            raise GraphNotCompiledError('The graph must be compiled before '
+                                        'being used, or after a change occured'
+                                        'to the graph structure.')
 
         if len(x) != len(self.sensors):
-            raise InvalidGraphInputError('The input dimensions do not match the number of ' +
-                                         ' input nodes in the graph.')
+            raise InvalidGraphInputError('The input dimensions do not match '
+                                         'the number of input nodes in the '
+                                         'graph.')
 
         for node in self.nodes:
             self.nodes[node].prev_output = self.nodes[node].output
@@ -404,17 +423,18 @@ class Graph:
         for output in self.outputs:
             network_output.append(self._compute_output(output))
 
-        output = Activations.softmax(network_output) if self.outputs else network_output
-
-        return output
+        if len(network_output) == 1:
+            return network_output
+        else:
+            return Activations.softmax(network_output)
 
     def _compute_output(self, node_id, level=0):
         """Compute the output of a node.
 
         Arguments:
             node_id: the id of the node whose output should be computed.
-            level: the level, or depth, the current node relative to the starting node
-                (typically an output node).
+            level: the level, or depth, the current node relative to the
+                   starting node (typically an output node).
 
         Returns: the output of the node.
         """
@@ -431,7 +451,8 @@ class Graph:
                 node_output += input_connection.weight * target.prev_output
             else:
                 node_output += input_connection.weight * \
-                               self._compute_output(input_connection.target_id, level=level + 1)
+                               self._compute_output(input_connection.target_id,
+                                                    level=level + 1)
 
         node.output = node.activation(node_output)
 
@@ -444,8 +465,8 @@ class Graph:
                 print(input_connection)
 
     def print(self, msg, format_args=None, verbosity=Verbosity.MINIMAL):
-        """Print a message whose visibility is controlled by the verbosity of the message and
-        the graphs verbosity setting.
+        """Print a message whose visibility is controlled by the verbosity of
+        the message and the graphs verbosity setting.
 
         Arguments:
             msg: The string to print.

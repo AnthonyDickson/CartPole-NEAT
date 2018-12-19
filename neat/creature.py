@@ -21,24 +21,38 @@ class Creature:
     def __init__(self, n_inputs=None, n_outputs=None):
         """Create a creature.
 
-        If both n_inputs and n_outputs are set, the creature initially has a fully
-        connected neural network with n_inputs input nodes and n_outputs
+        If both n_inputs and n_outputs are set, the creature initially has a
+        fully connected neural network with n_inputs input nodes and n_outputs
         output nodes.
-        Typically you want to set these parameters when you are first creating
-        the seed creature for a population. If you want to create a copy be
-        sure to use the copy() method.
+        Typically you want to set these parameters when you are creating a
+        creature, and the option to leave them as None is mainly for internal
+        use.
 
         Arguments:
             n_inputs: How many inputs to expect.
-            n_outputs: How many outputs are expected - also how many actions the creature can take.
+            n_outputs: How many outputs are expected - also how many actions
+                    the creature can take.
         """
-        # This option is here to support copying.
+        self.fitness = 0
+        self.species = None
+
         if n_inputs is None or n_outputs is None:
             self.genotype = None
             self.phenotype = None
+        else:
+            self.genotype = Creature.fully_connected_nn(n_inputs, n_outputs)
+            self.phenotype = Phenotype(self.genotype)
 
-            return
+    @staticmethod
+    def fully_connected_nn(n_inputs, n_outputs):
+        """Generate a genotype representing a fully connected neural network.
 
+        Arguments:
+            n_inputs: How many inputs the network should have.
+            n_outputs: How many outputs the network should have.
+
+        Returns: The generated genotype.
+        """
         genome = Genome()
 
         sensors = [NodeGene(Sensor()) for _ in range(n_inputs)]
@@ -54,10 +68,7 @@ class Creature:
         genome.add_genes(outputs)
         genome.add_genes(connections)
 
-        self.genotype = genome
-        self.phenotype = Phenotype(genome)
-        self.fitness = 0
-        self.species = None
+        return genome
 
     def copy(self):
         """Make a copy of a creature.
@@ -89,7 +100,8 @@ class Creature:
 
         Returns: the distance between the two creatures' genes.
         """
-        max_genome_length = max(len(self.genotype), len(other_creature.genotype))
+        max_genome_length = max(len(self.genotype),
+                                len(other_creature.genotype))
         aligned, disjoint, excess = self.align_genes(other_creature)
 
         disjointedness = len(disjoint) / max_genome_length
@@ -112,7 +124,8 @@ class Creature:
         mean_difference = 0
 
         for gene1, gene2 in zip(*aligned_genes):
-            mean_difference += abs(gene1.connection.weight - gene2.connection.weight)
+            mean_difference += abs(gene1.connection.weight -
+                                   gene2.connection.weight)
 
         return mean_difference / len(aligned_genes)
 

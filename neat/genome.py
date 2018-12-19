@@ -1,4 +1,6 @@
-"""Implements a basic model of genes, genomes (genotypes), and phenotypes of creatures in NEAT."""
+"""Implements a basic model of genes, genomes (genotypes), and phenotypes of
+creatures in NEAT.
+"""
 
 from neat.graph import Graph, Connection
 
@@ -6,7 +8,8 @@ from neat.graph import Graph, Connection
 class Gene:
     """Represents a single gene of a creature.
 
-    This stub is here simply to provide a sensible hierarchy for NodeGene and ConnectionGene.
+    This stub is here simply to provide a sensible hierarchy for NodeGene and
+    ConnectionGene.
     """
     pass
 
@@ -81,13 +84,15 @@ class ConnectionGene(Gene):
         return copy
 
     def __str__(self):
-        return 'Connection_Gene_%d(%s)' % (self.innovation_number, self.connection)
+        return 'Connection_Gene_%d(%s)' % (self.innovation_number,
+                                           self.connection)
 
     def __repr__(self):
         return self.__str__()
 
     def __eq__(self, other):
-        return self.connection == other.connection and self.innovation_number == other.innovation_number
+        return self.connection == other.connection and \
+               self.innovation_number == other.innovation_number
 
     def __hash__(self):
         return self.innovation_number
@@ -107,7 +112,8 @@ class Genome:
         """
         copy = Genome()
         copy.node_genes = [node_gene.copy() for node_gene in self.node_genes]
-        copy.connection_genes = set(connection_gene.copy() for connection_gene in self.connection_genes)
+        copy.connection_genes = set(connection_gene.copy() for connection_gene
+                                    in self.connection_genes)
 
         return copy
 
@@ -146,15 +152,21 @@ class Genome:
         """
         genes = self.connection_genes
         other_genes = other_genotype.connection_genes
-        excess_threshold = min(self.max_innovation_number, other_genotype.max_innovation_number)
+        excess_threshold = min(self.max_innovation_number,
+                               other_genotype.max_innovation_number)
 
-        # We assign aligned_genes to the two mirrored intersections so that we get the aligned genes of both genotypes.
-        # Only taking one intersection ignores one creature's aligned genes.
-        # The first element is the set of aligned genes from this genotype, and the other element is the aligned
-        # genes from the other genotype.
-        aligned_genes = (other_genes.intersection(genes), genes.intersection(other_genes))
+        # We assign aligned_genes to the two mirrored intersections so that
+        # we get the aligned genes of both genotypes. Only taking one
+        # intersection ignores one creature's aligned genes. The first element
+        # is the set of aligned genes from this genotype, and the other element
+        # is the aligned genes from the other genotype.
+        aligned_genes = (other_genes.intersection(genes),
+                         genes.intersection(other_genes))
         unaligned_genes = genes.symmetric_difference(other_genes)
-        disjoint_genes = set(filter(lambda gene: gene.innovation_number <= excess_threshold, unaligned_genes))
+        disjoint_genes = set(
+            filter(lambda gene: gene.innovation_number <= excess_threshold,
+                   unaligned_genes)
+        )
         excess_genes = unaligned_genes.difference(disjoint_genes)
 
         return aligned_genes, disjoint_genes, excess_genes

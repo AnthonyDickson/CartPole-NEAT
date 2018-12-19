@@ -17,7 +17,8 @@ class NeatAlgorithm:
     def __init__(self, env, n_pops=150):
         self.env = env
         self.n_pops = n_pops
-        self.population = self.init_population(env.observation_space.shape[0], env.action_space.n)
+        self.population = self.init_population(env.observation_space.shape[0],
+                                               env.action_space.n)
         self.species = set()
 
     def init_population(self, n_inputs, n_outputs):
@@ -29,11 +30,12 @@ class NeatAlgorithm:
 
         Arguments:
             n_inputs: How many inputs to expect. An observation in CartPole
-                      has four dimensions, so in this case n_inputs would be four.
+                      has four dimensions, so in this case n_inputs would be
+                      four.
             n_outputs: How many outputs to expect. CartPole has two actions in
                       its action space, so in this case n_inputs would be two.
 
-        Returns: the intialised population that is ready for use.
+        Returns: the initialised population that is ready for use.
         """
         creature = Creature(n_inputs, n_outputs)
         population = [creature.copy() for _ in range(self.n_pops)]
@@ -52,8 +54,11 @@ class NeatAlgorithm:
         step_msg_format = \
             "{:03d}/{:03d} - steps: {:02d} - step time {:02.4f}s"
 
-        episode_complete_msg_format = "{:03d}/{:03d} - avg. steps: {:.2f} " \
-                                      "- avg. step time: {:02.4f}s - avg. fitness: {:.4f} - total time: {:02.2f}s"
+        episode_complete_msg_format = "{:03d}/{:03d} - " \
+                                      "avg. steps: {:.2f} - " \
+                                      "avg. step time: {:02.4f}s - " \
+                                      "avg. fitness: {:.4f} - " \
+                                      "total time: {:02.2f}s"
 
         step_history = []
 
@@ -73,7 +78,10 @@ class NeatAlgorithm:
                     if done:
                         creature.fitness = step + 1
                         step_history.append(step + 1)
-                        print(step_msg_format.format(pop_i + 1, self.n_pops, step + 1, time() - pop_start), end='\r')
+                        print(step_msg_format.format(pop_i + 1, self.n_pops,
+                                                     step + 1,
+                                                     time() - pop_start),
+                              end='\r')
 
                         break
                 else:
@@ -87,17 +95,19 @@ class NeatAlgorithm:
             total_episode_time = time() - episode_start
             avg_step_time = total_episode_time / self.n_pops
 
-            print(episode_complete_msg_format.format(self.n_pops, self.n_pops, avg_steps, avg_step_time,
-                                                     total_episode_time, avg_fitness))
+            print(episode_complete_msg_format.format(self.n_pops, self.n_pops,
+                                                     avg_steps, avg_step_time,
+                                                     total_episode_time,
+                                                     avg_fitness))
 
-        print('Total run time: {:.2f}s - avg. steps: {:.2f} - best steps: {}'.format(time() - sim_start,
-                                                                                     np.mean(step_history),
-                                                                                     np.max(step_history)))
+        print('Total run time: {:.2f}s - avg. steps: {:.2f} - best steps: {}'
+              .format(time() - sim_start, np.mean(step_history),
+                      np.max(step_history)))
         print()
 
     def process_episode(self):
-        """Do the post-episode stuff such as speciating, adjusting creature fitness,
-        crossover etc.
+        """Do the post-episode stuff such as speciating, adjusting creature
+        fitness, crossover etc.
         """
         for creature in self.population:
             self.speciate(creature)
@@ -120,7 +130,8 @@ class NeatAlgorithm:
             creature: the creature to place into a species.
         """
         for species_i in self.species:
-            if creature.distance(species_i.representative) < Species.compatibility_threshold:
+            if creature.distance(species_i.representative) < \
+                    Species.compatibility_threshold:
                 species_i.add(creature)
                 creature.species = species_i
 
@@ -137,11 +148,13 @@ class NeatAlgorithm:
         """Allot the number of offspring each species is allowed for the
         current generation.
         """
-        species_mean_fitness = [species.mean_fitness for species in self.species]
+        species_mean_fitness = \
+            [species.mean_fitness for species in self.species]
         sum_mean_species_fitness = sum(species_mean_fitness)
 
         for species, mean_fitness in zip(self.species, species_mean_fitness):
-            species.alloted_offspring_quota = mean_fitness / sum_mean_species_fitness * self.n_pops
+            species.allotted_offspring_quota = \
+                mean_fitness / sum_mean_species_fitness * self.n_pops
 
     def selection(self):
         """Perform selection on the population.

@@ -18,7 +18,8 @@ class CodeNameGenerator:
     key_pattern = re.compile(r"^\[([A-Za-z])\]$")
     comment_pattern = re.compile(r"^#.*")
 
-    def __init__(self, data_path='neat/data/ubuntu/', adjective_file='adjectives.txt',
+    def __init__(self, data_path='neat/data/ubuntu/',
+                 adjective_file='adjectives.txt',
                  noun_file='nouns.txt'):
         """Create a name generator based on Ubuntu code names.
 
@@ -32,7 +33,8 @@ class CodeNameGenerator:
                 marker '[A]'.
 
         Arguments:
-            data_path: where the data files containing the adjective and animal names are located.
+            data_path: where the data files containing the adjective and animal
+                       names are located.
             adjective_file: the name of the file that contains the adjectives.
             noun_file: the name of the file that contains the animal names.
         """
@@ -78,7 +80,8 @@ class CodeNameGenerator:
     def process(line):
         """Process a line and make it ready for use.
 
-        Returns: the line, stripped of trailing whitespace and all words capitalised.
+        Returns: the line, stripped of trailing whitespace and all words
+        capitalised.
         """
         line = line.strip()
         line = CodeNameGenerator.capitalise(line)
@@ -91,7 +94,8 @@ class CodeNameGenerator:
 
         Returns: the string, with all words capitalised.
         """
-        return ' '.join(map(CodeNameGenerator.capitalise_hyphened, string.split()))
+        return ' '.join(map(CodeNameGenerator.capitalise_hyphened,
+                            string.split()))
 
     @staticmethod
     def capitalise_hyphened(string):
@@ -159,7 +163,8 @@ class Species:
     @property
     def mean_fitness(self):
         """The mean fitness of the entire species."""
-        return sum([creature.fitness for creature in self.members]) / len(self.members)
+        return sum([creature.fitness for creature in self.members]) / \
+               len(self.members)
 
     def add(self, creature):
         """Add a creature to the species.
@@ -173,7 +178,8 @@ class Species:
         """Cull the Weak
         Increase damage against Slowed or Chilled enemies by 20%.
 
-        "I'll show you the same mercy you showed my helpless family." —Tyla Shrikewing
+        "I'll show you the same mercy you showed my helpless family."
+        —Tyla Shrikewing
 
         Unlocked at level 20
 
