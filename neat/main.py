@@ -73,7 +73,7 @@ class NeatAlgorithm:
 
                 for step in range(n_steps):
                     action = creature.get_action(observation)
-                    observation, reward, done, info = self.env.step(action)
+                    observation, reward, done, _ = self.env.step(action)
 
                     if done:
                         creature.fitness = step + 1
