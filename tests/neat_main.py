@@ -21,6 +21,7 @@ class NeatAlgorithmUnitTest(unittest.TestCase):
         try:
             f = open(os.devnull, 'w')
             sys.stdout = f
+            sys.stderr = f
 
             env = gym.make('CartPole-v0')
             neat = NeatAlgorithm(env)
@@ -29,6 +30,7 @@ class NeatAlgorithmUnitTest(unittest.TestCase):
         except Exception as error:
             raise error
         finally:
+            sys.stderr = sys.__stderr__
             sys.stdout = sys.__stdout__
             f.close()
 

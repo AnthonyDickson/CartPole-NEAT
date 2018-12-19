@@ -1,6 +1,7 @@
 """Implements a basic model of genes, genomes (genotypes), and phenotypes of
 creatures in NEAT.
 """
+import random
 
 from neat.graph import Graph, Connection
 
@@ -37,11 +38,15 @@ class NodeGene(Gene):
     def __str__(self):
         return 'Node_gene(%s)' % self.node
 
+    def __repr__(self):
+        return self.__str__()
+
     def __eq__(self, other):
-        try:
-            return self.__name__ == other.__name__
-        except AttributeError:
-            return False
+        return self.node == other.node
+
+    def __hash__(self):
+        # Use negative node id to avoid collisions with connection genes.
+        return -self.node.id
 
 
 class ConnectionGene(Gene):
@@ -69,7 +74,7 @@ class ConnectionGene(Gene):
         try:
             self.innovation_number = ConnectionGene.pool[self.connection]
         except KeyError:
-            self.innovation_number = len(ConnectionGene.pool)
+            self.innovation_number = len(ConnectionGene.pool) + 1
             ConnectionGene.pool[self.connection] = self.innovation_number
 
     def copy(self):
@@ -101,6 +106,21 @@ class ConnectionGene(Gene):
 class Genome:
     """Represents a creature's genome (a set of genes)."""
 
+    # The probability that the next offspring will be created through mutation
+    # only.
+    p_mutate_only = 0.25
+
+    # The probability that the genes of the next offspring will be chosen
+    # randomly from each parent.
+    p_mate_choose = 0.6
+
+    # The probability that the genes of the next offspring will be chosen by
+    # averaging the weights between parents.
+    p_mate_average = 1 - p_mate_choose
+
+    # The probability that the next connection gene will be a recurrent one.
+    p_recurrent_connection = 0.2
+
     def __init__(self):
         self.node_genes = []
         self.connection_genes = set()
@@ -116,6 +136,16 @@ class Genome:
                                     in self.connection_genes)
 
         return copy
+
+    @property
+    def all_genes(self):
+        """All of the genotype's genes."""
+        return list(self.node_genes) + list(self.connection_genes)
+
+    @property
+    def max_innovation_number(self):
+        """The highest innovation number in the genotype's connection genes."""
+        return max([gene.innovation_number for gene in self.connection_genes])
 
     def add_gene(self, gene):
         """Add a gene to the genome.
@@ -147,8 +177,7 @@ class Genome:
 
         Returns: a 3-tuple where the elements are a set of aligned genes,
                  disjoint genes, and excess genes. The aligned genes element
-                 itself is also a tuple which contains the sets of aligned
-                 genes for each genotype.
+                 itself is a list containing aligned gene pairs.
         """
         genes = self.connection_genes
         other_genes = other_genotype.connection_genes
@@ -169,12 +198,78 @@ class Genome:
         )
         excess_genes = unaligned_genes.difference(disjoint_genes)
 
-        return aligned_genes, disjoint_genes, excess_genes
+        return list(zip(*aligned_genes)), disjoint_genes, excess_genes
 
-    @property
-    def max_innovation_number(self):
-        """The highest innovation number in the genotype's connection genes."""
-        return max([gene.innovation_number for gene in self.connection_genes])
+    def crossover(self, other):
+        """Perform crossover between two genotypes.
+
+        The genotype that this method is called on is considered the dominant
+        genotype, and genes will be inherited from this genotype when choosing
+        between this genotype and the other.
+
+        Arguments:
+                other: the other genotype to crossover with.
+
+        Returns: a new genotype.
+        """
+        if random.random() < Genome.p_mutate_only:
+            return self.copy()
+        elif random.random() < Genome.p_mate_choose:
+            node_genes = []
+
+            aligned_node_genes = (list(set(other.node_genes)
+                                       .intersection(self.node_genes)),
+                                  list(set(self.node_genes)
+                                       .intersection(other.node_genes)))
+
+            for node_gene1, node_gene2 in zip(*aligned_node_genes):
+                if random.random() < 0.5:
+                    node_genes.append(node_gene1.copy())
+                else:
+                    node_genes.append(node_gene2.copy())
+
+            node_genes += list(set(self.node_genes)
+                               .symmetric_difference(other.node_genes))
+
+            node_genes = sorted(node_genes, key=lambda ng: ng.node.id)
+
+            connection_genes = random.choices(list(self.connection_genes),
+                                              k=len(self.connection_genes) // 2)
+            connection_genes += set(other.connection_genes) \
+                .difference(connection_genes)
+            connection_genes = sorted(connection_genes,
+                                      key=lambda cg: cg.innovation_number)
+
+            genotype = Genome()
+            genotype.add_genes(node_genes)
+            genotype.add_genes(connection_genes)
+
+            return genotype
+        else:
+            aligned, disjoint, excess = self.align_genes(other)
+            genes = []
+
+            for node_gene, other_node_gene in \
+                    zip(self.node_genes, other.node_genes):
+                gene = node_gene.copy()
+                gene.node.bias = 0.5 * (gene.node.bias +
+                                        other_node_gene.node.bias)
+                genes.append(gene)
+
+            for gene1, gene2 in aligned:
+                gene = gene1.copy()
+                gene.connection.weight = 0.5 * (gene1.connection.weight +
+                                                gene2.connection.weight)
+                genes.append(gene)
+
+            genotype = Genome()
+            genotype.add_genes(genes)
+
+            return genotype
+
+    def mutate(self):
+        """Mutate a given genotype."""
+        pass
 
     def __len__(self):
         """Get the length of the genome.

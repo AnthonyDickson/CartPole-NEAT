@@ -58,7 +58,7 @@ class NeatAlgorithm:
                                       "avg. steps: {:.2f} - " \
                                       "avg. step time: {:02.4f}s - " \
                                       "avg. fitness: {:.4f} - " \
-                                      "total time: {:02.2f}s"
+                                      "total time: {:.4f}s"
 
         step_history = []
 
@@ -119,9 +119,6 @@ class NeatAlgorithm:
         self.selection()
         self.crossover()
 
-        for creature in self.population:
-            self.mutate(creature)
-
     def speciate(self, creature):
         """Place a creature into a species, or create a new species if no
         suitable species exists.
@@ -172,12 +169,20 @@ class NeatAlgorithm:
 
     def crossover(self):
         """Perform crossover on the population."""
-        pass
+        best_species = max(self.species, key=lambda s: s.champion.fitness)
+        the_champ = best_species.champion
+        new_population = [species.champion for species in self.species]
+        new_population.append(the_champ)
 
-    def mutate(self, creature):
-        """Mutate the given creature's genotype.
+        total_expected_offspring = sum([species.allotted_offspring_quota
+                                        for species in self.species])
 
-        Arguments:
-            creature: the creature to be mutated.
-        """
-        pass
+        if total_expected_offspring < self.n_pops:
+            best_species.allottd_offspring_quota += self.n_pops - \
+                                                    total_expected_offspring
+
+        for species in self.species:
+            new_population += species.next_generation(the_champ,
+                                                      self.population)
+
+        self.population = new_population

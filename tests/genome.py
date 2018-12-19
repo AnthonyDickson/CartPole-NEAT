@@ -42,7 +42,7 @@ class GenomeUnitTest(unittest.TestCase):
         # Connection genes are all unique so their innovation numbers should just increase
         # monotonically starting from one.
         for i, gene in enumerate(genome.connection_genes):
-            self.assertEqual(i, gene.innovation_number,
+            self.assertEqual(i + 1, gene.innovation_number,
                              'Expected an innovation number of %d, but got %d.' % (i, gene.innovation_number))
 
     def test_genome_to_phenotype(self):

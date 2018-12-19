@@ -123,7 +123,7 @@ class Creature:
         """
         mean_difference = 0
 
-        for gene1, gene2 in zip(*aligned_genes):
+        for gene1, gene2 in aligned_genes:
             mean_difference += abs(gene1.connection.weight -
                                    gene2.connection.weight)
 
@@ -145,6 +145,24 @@ class Creature:
                  genes for each creature.
         """
         return self.genotype.align_genes(other_creature.genotype)
+
+    def crossover(self, other):
+        """Perform crossover between the genotypes of two creatures.
+
+        Arguments:
+                other: the other creature to crossover with.
+
+        Returns: a new creature.
+        """
+        creature = Creature()
+        creature.genotype = self.genotype.crossover(other.genotype)
+        creature.phenotype = Phenotype(creature.genotype)
+
+        return creature
+
+    def mutate(self):
+        """Mutate a creature's genotype."""
+        self.genotype.mutate()
 
     def __cmp__(self, other_creature):
         if self.fitness < other_creature.fitness:

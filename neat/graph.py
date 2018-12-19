@@ -81,8 +81,8 @@ class Node:
         self.bias = random.gauss(0, 1)
         self.activation = activation
 
-        self.id = Node.count
         Node.count += 1
+        self.id = Node.count
 
     def copy(self):
         """Make a copy of a node.
@@ -101,6 +101,9 @@ class Node:
 
     def __str__(self):
         return 'Node_%d' % self.id
+
+    def __eq__(self, other):
+        return self.__class__ == other.__class__ and self.id == other.id
 
 
 # Create distinct node types so we can distinguish them later.
@@ -151,8 +154,8 @@ class Connection:
         self.is_enabled = True
         self.is_recurrent = False
 
-        self.id = Connection.count
         Connection.count += 1
+        self.id = Connection.count
 
     def copy(self):
         """Make a copy of a connection.

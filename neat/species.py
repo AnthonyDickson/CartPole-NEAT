@@ -126,6 +126,10 @@ class Species:
     # belong in the same species or not.
     compatibility_threshold = 3.0
 
+    # The probability that a member of this species will mate with a creature
+    # from another species.
+    p_interspecies_mating = 0.025
+
     @staticmethod
     def next_id():
         """Get the next species id.
@@ -157,7 +161,7 @@ class Species:
         self.name = name if name != '' else Species.next_name()
         self.members = set()
         self.representative = None
-        self.alloted_offspring_quota = 0
+        self.allotted_offspring_quota = 0
         self.champion = None
 
     @property
@@ -173,6 +177,15 @@ class Species:
             creature: the creature to be added to the species.
         """
         self.members.add(creature)
+
+    def assign_members(self, members):
+        """Assign all the members of this species.
+
+        Arguments:
+            members: the new members of the species.
+        """
+        self.members = set(members)
+        self.representative = random.choice(list(members))
 
     def cull_the_weak(self, how_many):
         """Cull the Weak
@@ -193,12 +206,46 @@ class Species:
         # ranked in order of increasing fitness.
         self.champion = ranked[-1]
         num_to_kill = int(how_many * len(ranked))
-        self.members = set(ranked[num_to_kill:])
-
-        survivor_list = list(self.members)
-        self.representative = random.choice(survivor_list)
+        survivor_list = list(ranked[num_to_kill:])
+        self.assign_members(survivor_list)
 
         return survivor_list
+
+    def next_generation(self, generation_champ, population):
+        """Get the species' next generation of creatures.
+
+        Arguments:
+            generation_champ: the best creature for the whole generation, who's
+                              just an all-round champ.
+            population: the entire population of creatures, including the champ
+                        and the rest of the chumps in the generation.
+
+        Returns: a list of new creatures generated via crossover. Up to the
+                 allotted number of offspring will be created.
+        """
+        offspring = []
+        pool = list(self.members)
+
+        offspring.append(self.champion.crossover(generation_champ))
+
+        while len(offspring) < self.allotted_offspring_quota:
+            parent1 = random.choice(pool)
+
+            if random.random() < Species.p_interspecies_mating:
+                parent2 = random.choice(population)
+            else:
+                parent2 = random.choice(pool)
+
+            # The parent who 'initiates' crossover (calls crossover) is
+            # considered the dominant parent, so matter order matters.
+            if parent1.fitness >= parent2.fitness:
+                offspring.append(parent1.crossover(parent2))
+            else:
+                offspring.append(parent2.crossover(parent1))
+
+        self.assign_members(offspring)
+
+        return offspring
 
     def __str__(self):
         return '%s (Species_%d)' % (self.name, self.id)
