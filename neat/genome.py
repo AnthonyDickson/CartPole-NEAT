@@ -32,7 +32,7 @@ class NodeGene(Gene):
         return copy
 
     def __str__(self):
-        return 'Gene_Node(%s)' % self.node
+        return 'Node_gene(%s)' % self.node
 
     def __eq__(self, other):
         try:
@@ -64,10 +64,10 @@ class ConnectionGene(Gene):
         self.connection = Connection(origin_id, target_id)
 
         try:
-            self.innovation_number = ConnectionGene.pool[self]
+            self.innovation_number = ConnectionGene.pool[self.connection]
         except KeyError:
             self.innovation_number = len(ConnectionGene.pool)
-            ConnectionGene.pool[self] = self.innovation_number
+            ConnectionGene.pool[self.connection] = self.innovation_number
 
     def copy(self):
         """Make a copy of this gene.
@@ -81,13 +81,16 @@ class ConnectionGene(Gene):
         return copy
 
     def __str__(self):
-        return 'Gene_Connection(%s)' % self.connection
+        return 'Connection_Gene_%d(%s)' % (self.innovation_number, self.connection)
+
+    def __repr__(self):
+        return self.__str__()
 
     def __eq__(self, other):
-        return self.connection == other.connection
+        return self.connection == other.connection and self.innovation_number == other.innovation_number
 
     def __hash__(self):
-        return hash(self.connection)
+        return self.innovation_number
 
 
 class Genome:
@@ -95,7 +98,7 @@ class Genome:
 
     def __init__(self):
         self.node_genes = []
-        self.connection_genes = []
+        self.connection_genes = set()
 
     def copy(self):
         """Make a copy of a genome.
@@ -104,8 +107,7 @@ class Genome:
         """
         copy = Genome()
         copy.node_genes = [node_gene.copy() for node_gene in self.node_genes]
-        copy.connection_genes = [connection_gene.copy() \
-                                 for connection_gene in self.connection_genes]
+        copy.connection_genes = set(connection_gene.copy() for connection_gene in self.connection_genes)
 
         return copy
 
@@ -120,7 +122,7 @@ class Genome:
         if isinstance(gene, NodeGene):
             self.node_genes.append(gene)
         else:
-            self.connection_genes.append(gene)
+            self.connection_genes.add(gene)
 
     def add_genes(self, genes):
         """Add a list of genes to the genome.
@@ -137,42 +139,30 @@ class Genome:
         Arguments:
             other_genotype: the genotype to align with.
 
-        Returns: a 3-tuple where the elements are a list of aligned genes,
+        Returns: a 3-tuple where the elements are a set of aligned genes,
                  disjoint genes, and excess genes. The aligned genes element
-                 itself is also a tuple which contains the pairs of aligned
-                 genes.
+                 itself is also a tuple which contains the sets of aligned
+                 genes for each genotype.
         """
         genes = self.connection_genes
         other_genes = other_genotype.connection_genes
+        excess_threshold = min(self.max_innovation_number, other_genotype.max_innovation_number)
 
-        min_gene_length = min(len(genes), len(other_genes))
-
-        max_innovation_number = max([gene.innovation_number for gene in genes])
-        other_max_innovation_number = max([gene.innovation_number for gene in other_genes])
-        excess_threshold = min(max_innovation_number, other_max_innovation_number)
-
-        aligned_genes = []
-        disjoint_genes = []
-        excess_genes = []
-
-        for i in range(min_gene_length):
-            innovation_number = genes[i].innovation_number
-            other_innovation_number = other_genes[i].innovation_number
-
-            if innovation_number == other_innovation_number:
-                aligned_genes.append((genes[i], other_genes[i]))
-            else:
-                if innovation_number <= excess_threshold:
-                    disjoint_genes.append(genes[i])
-                else:
-                    excess_genes.append(genes[i])
-
-                if other_innovation_number <= excess_threshold:
-                    disjoint_genes.append(other_genes[i])
-                else:
-                    excess_genes.append(other_genes[i])
+        # We assign aligned_genes to the two mirrored intersections so that we get the aligned genes of both genotypes.
+        # Only taking one intersection ignores one creature's aligned genes.
+        # The first element is the set of aligned genes from this genotype, and the other element is the aligned
+        # genes from the other genotype.
+        aligned_genes = (other_genes.intersection(genes), genes.intersection(other_genes))
+        unaligned_genes = genes.symmetric_difference(other_genes)
+        disjoint_genes = set(filter(lambda gene: gene.innovation_number <= excess_threshold, unaligned_genes))
+        excess_genes = unaligned_genes.difference(disjoint_genes)
 
         return aligned_genes, disjoint_genes, excess_genes
+
+    @property
+    def max_innovation_number(self):
+        """The highest innovation number in the genotype's connection genes."""
+        return max([gene.innovation_number for gene in self.connection_genes])
 
     def __len__(self):
         """Get the length of the genome.

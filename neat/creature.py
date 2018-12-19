@@ -111,7 +111,7 @@ class Creature:
         """
         mean_difference = 0
 
-        for gene1, gene2 in aligned_genes:
+        for gene1, gene2 in zip(*aligned_genes):
             mean_difference += abs(gene1.connection.weight - gene2.connection.weight)
 
         return mean_difference / len(aligned_genes)
@@ -128,8 +128,8 @@ class Creature:
 
         Returns: a 3-tuple where the elements are a list of aligned genes,
                  disjoint genes, and excess genes. The aligned genes element
-                 itself is also a tuple which contains the pairs of aligned
-                 genes.
+                 itself is also a tuple which contains the sets of aligned
+                 genes for each creature.
         """
         return self.genotype.align_genes(other_creature.genotype)
 
