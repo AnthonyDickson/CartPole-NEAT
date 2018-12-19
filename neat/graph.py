@@ -239,11 +239,11 @@ class Graph:
         """
         copy = Graph()
 
-        for i, node in enumerate(self.nodes):
+        for node in self.nodes:
             copy.add_node(self.nodes[node].copy())
 
-            for connection in self.connections[i]:
-                copy.connections[i].append(connection.copy())
+            for connection in self.connections[node]:
+                copy.connections[node].append(connection.copy())
 
         # If a graph is copied as-is, then it should still be compiled if the
         # original was compiled, and not compiled if the other was not
@@ -424,7 +424,7 @@ class Graph:
             network_output.append(self._compute_output(output))
 
         if len(network_output) == 1:
-            return network_output
+            return network_output[0]
         else:
             return Activations.softmax(network_output)
 
@@ -460,8 +460,8 @@ class Graph:
 
     def print_connections(self):
         """Print the connections (inputs) of every node in the graph."""
-        for node_id, _ in enumerate(self.nodes):
-            for input_connection in self.connections[node_id]:
+        for node in self.nodes:
+            for input_connection in self.connections[node]:
                 print(input_connection)
 
     def print(self, msg, format_args=None, verbosity=Verbosity.MINIMAL):
