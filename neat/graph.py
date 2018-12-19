@@ -260,7 +260,7 @@ class Graph:
             has_path_to_input |= self._has_path_to_input(output)
 
         if not has_path_to_input:
-            raise InvalidGraphError('Graph needs at least one sensor (input) to be connected ' + \
+            raise InvalidGraphError('Graph needs at least one sensor (input) to be connected ' +
                                     'to an output.')
 
         self.is_compiled = True
@@ -386,11 +386,11 @@ class Graph:
         Returns: the softmax output of the neural network graph.
         """
         if not self.is_compiled:
-            raise GraphNotCompiledError('The graph must be compiled before being used, ' + \
+            raise GraphNotCompiledError('The graph must be compiled before being used, ' +
                                         'or after a change occured to the graph structure.')
 
         if len(x) != len(self.sensors):
-            raise InvalidGraphInputError('The input dimensions do not match the number of ' + \
+            raise InvalidGraphInputError('The input dimensions do not match the number of ' +
                                          ' input nodes in the graph.')
 
         for node in self.nodes:

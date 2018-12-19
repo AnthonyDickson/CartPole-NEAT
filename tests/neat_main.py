@@ -10,6 +10,7 @@ import gym
 from neat.main import NeatAlgorithm
 
 
+# noinspection PyMethodMayBeStatic
 class NeatAlgorithmUnitTest(unittest.TestCase):
     """Test cases for the neat algorithm in the main module."""
 
