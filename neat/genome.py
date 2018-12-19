@@ -215,57 +215,138 @@ class Genome:
         if random.random() < Genome.p_mutate_only:
             return self.copy()
         elif random.random() < Genome.p_mate_choose:
-            node_genes = []
-
-            aligned_node_genes = (list(set(other.node_genes)
-                                       .intersection(self.node_genes)),
-                                  list(set(self.node_genes)
-                                       .intersection(other.node_genes)))
-
-            for node_gene1, node_gene2 in zip(*aligned_node_genes):
-                if random.random() < 0.5:
-                    node_genes.append(node_gene1.copy())
-                else:
-                    node_genes.append(node_gene2.copy())
-
-            node_genes += list(set(self.node_genes)
-                               .symmetric_difference(other.node_genes))
-
-            node_genes = sorted(node_genes, key=lambda ng: ng.node.id)
-
-            connection_genes = random.choices(list(self.connection_genes),
-                                              k=len(self.connection_genes) // 2)
-            connection_genes += set(other.connection_genes) \
-                .difference(connection_genes)
-            connection_genes = sorted(connection_genes,
-                                      key=lambda cg: cg.innovation_number)
-
-            genotype = Genome()
-            genotype.add_genes(node_genes)
-            genotype.add_genes(connection_genes)
-
-            return genotype
+            return self._crossover_choose(other)
         else:
-            aligned, disjoint, excess = self.align_genes(other)
-            genes = []
+            return self._crossover_average(other)
 
-            for node_gene, other_node_gene in \
-                    zip(self.node_genes, other.node_genes):
-                gene = node_gene.copy()
-                gene.node.bias = 0.5 * (gene.node.bias +
-                                        other_node_gene.node.bias)
-                genes.append(gene)
+    def _crossover_choose(self, other):
+        """Perform crossover between two genotypes by choosing genes randomly
+        from each parent.
 
-            for gene1, gene2 in aligned:
-                gene = gene1.copy()
-                gene.connection.weight = 0.5 * (gene1.connection.weight +
-                                                gene2.connection.weight)
-                genes.append(gene)
+        The genotype that this method is called on is considered the dominant
+        genotype, and genes will be inherited from this genotype when choosing
+        between this genotype and the other.
 
-            genotype = Genome()
-            genotype.add_genes(genes)
+        Arguments:
+                other: the other genotype to crossover with.
 
-            return genotype
+        Returns: a new genotype.
+        """
+        node_genes = self._choose_node_genes(other)
+        connection_genes = self._choose_connection_genes(other)
+
+        genotype = Genome()
+        genotype.add_genes(node_genes)
+        genotype.add_genes(connection_genes)
+
+        return genotype
+
+    def _choose_connection_genes(self, other):
+        """Randomly choose connection genes from each genotype.
+
+        The aligned genes are each taken from a random genotype and the
+        unaligned genes (i.e. disjointed and excess genes) are all inherited.
+
+        Arguments:
+                other: the other genotype to crossover with.
+
+        Returns: the selection of connection genes from both genotypes.
+        """
+        aligned, disjointed, excess = self.align_genes(other)
+
+        connection_genes = set(Genome._combine_randomly(aligned))
+        connection_genes.update(disjointed)
+        connection_genes.update(excess)
+
+        connection_genes = sorted(connection_genes,
+                                  key=lambda cg: cg.innovation_number)
+        return connection_genes
+
+    def _choose_node_genes(self, other):
+        """Randomly choose node genes from each genotype.
+
+        The aligned genes are each taken from a random genotype and the
+        unaligned genes (i.e. disjointed and excess genes) are all inherited.
+
+        Arguments:
+                other: the other genotype to crossover with.
+
+        Returns: the selection of node genes from both genotypes.
+        """
+        aligned_with_self = list(set(other.node_genes)
+                                 .intersection(self.node_genes))
+        aligned_with_other = list(set(self.node_genes)
+                                  .intersection(other.node_genes))
+        aligned_node_genes = (aligned_with_self, aligned_with_other)
+        aligned_node_genes = zip(*aligned_node_genes)
+
+        unaligned_node_genes = list(set(self.node_genes)
+                                    .symmetric_difference(other.node_genes))
+
+        node_genes = Genome._combine_randomly(aligned_node_genes)
+        node_genes += unaligned_node_genes
+        node_genes = sorted(node_genes, key=lambda ng: ng.node.id)
+
+        return node_genes
+
+    @staticmethod
+    def _combine_randomly(aligned):
+        """Combines list of aligned gene pairs by randomly selecting one gene
+        from each pair.
+
+        More specifically, this method reduces a list of tuples (where each
+        tuple represents an aligned gene pair) into a list of genes by
+        randomly choosing and copying a single gene from each pair.
+
+        Arguments;
+            aligned: the list of aligned gene pairs.
+
+        Returns: a list of randomly selected genes.
+        """
+        selection = []
+
+        for gene1, gene2 in aligned:
+            if random.random() < 0.5:
+                selection.append(gene1.copy())
+            else:
+                selection.append(gene2.copy())
+
+        return selection
+
+    def _crossover_average(self, other):
+        """Perform crossover between two genotypes by averaging weights and
+        biases in aligned genes.
+
+        The genotype that this method is called on is considered the dominant
+        genotype, and genes will be inherited from this genotype when choosing
+        between this genotype and the other.
+
+        Arguments:
+                other: the other genotype to crossover with.
+
+        Returns: a new genotype.
+        """
+        aligned, disjoint, excess = self.align_genes(other)
+        genes = []
+        for node_gene, other_node_gene in \
+                zip(self.node_genes, other.node_genes):
+            gene = node_gene.copy()
+            gene.node.bias = 0.5 * (gene.node.bias +
+                                    other_node_gene.node.bias)
+            genes.append(gene)
+        for gene1, gene2 in aligned:
+            gene = gene1.copy()
+            gene.connection.weight = 0.5 * (gene1.connection.weight +
+                                            gene2.connection.weight)
+            genes.append(gene)
+
+        genes += disjoint
+        genes += excess
+
+        genotype = Genome()
+        genotype.add_genes(genes)
+
+        return genotype
 
     def mutate(self):
         """Mutate a given genotype."""
