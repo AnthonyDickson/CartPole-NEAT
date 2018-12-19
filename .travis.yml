@@ -2,6 +2,7 @@ language: python
 python:
   - "3.7-dev"
 install:
+  # Conda Installation
   - sudo apt-get update
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
@@ -14,11 +15,17 @@ install:
 
   - conda env create -f neat/environment.yml
   - source activate neat
-  - pip install codecov
+  # Code Coverage Setup
+  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+  - chmod +x ./cc-test-reporter
+  - pip install -r requirements.txt
 script:
   - coverage run -m tests
+after_script:
+  - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
 after_success:
   - codecov
+  - python-codacy-coverage -r coverage.xml
 notifications:
   email:
     on_success: change
