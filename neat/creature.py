@@ -1,4 +1,6 @@
 """Implements a creature that would exist in the NEAT algorithm."""
+import random
+
 import numpy as np
 
 from neat.genome import Genome, ConnectionGene, NodeGene, Phenotype
@@ -17,6 +19,14 @@ class Creature:
     disjointedness_importance = 1.0
     excessivity_importance = 1.0
     weight_unsameness_importance = 3.0
+
+    # The probability that the next offspring will be created through mutation
+    # only.
+    p_mutate_only = 0.25
+
+    # The probability that a new creature will be created through crossover
+    # only.
+    p_mate_only = 0.2
 
     def __init__(self, n_inputs=None, n_outputs=None):
         """Create a creature.
@@ -146,16 +156,26 @@ class Creature:
         """
         return self.genotype.align_genes(other_creature.genotype)
 
-    def crossover(self, other):
-        """Perform crossover between the genotypes of two creatures.
+    def mate(self, other):
+        """Mate, it's time to mate. Create a baby creature from two creatures.
 
         Arguments:
-                other: the other creature to crossover with.
+                other: the other creature to mate with, mate.
 
         Returns: a new creature.
         """
         creature = Creature()
-        creature.genotype = self.genotype.crossover(other.genotype)
+        mate_only = random.random() < Creature.p_mate_only
+        mutate_only = random.random() < Creature.p_mutate_only
+
+        if mutate_only:
+            creature.genotype = self.genotype.copy()
+        else:
+            creature.genotype = self.genotype.crossover(other.genotype)
+
+        if not mate_only:
+            creature.mutate()
+
         creature.phenotype = Phenotype(creature.genotype)
 
         return creature

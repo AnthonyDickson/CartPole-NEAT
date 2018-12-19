@@ -87,7 +87,7 @@ class NeatAlgorithm:
                 else:
                     creature.fitness = n_steps
 
-            self.process_episode()
+            self.do_the_thing()
 
             avg_fitness = sum(c.fitness for c in self.population) / self.n_pops
 
@@ -105,7 +105,7 @@ class NeatAlgorithm:
                       np.max(step_history)))
         print()
 
-    def process_episode(self):
+    def do_the_thing(self):
         """Do the post-episode stuff such as speciating, adjusting creature
         fitness, crossover etc.
         """
@@ -116,8 +116,8 @@ class NeatAlgorithm:
             creature.adjust_fitness()
 
         self.allot_offspring_quota()
-        self.selection()
-        self.crossover()
+        self.not_so_natural_selection()
+        self.mating_season()
 
     def speciate(self, creature):
         """Place a creature into a species, or create a new species if no
@@ -144,6 +144,9 @@ class NeatAlgorithm:
     def allot_offspring_quota(self):
         """Allot the number of offspring each species is allowed for the
         current generation.
+
+        Sort of like the One-Child policy but we force each species to have
+        exactly the amount of babies we tell them to. No more, no less.
         """
         species_mean_fitness = \
             [species.mean_fitness for species in self.species]
@@ -153,11 +156,12 @@ class NeatAlgorithm:
             species.allotted_offspring_quota = \
                 mean_fitness / sum_mean_species_fitness * self.n_pops
 
-    def selection(self):
+    def not_so_natural_selection(self):
         """Perform selection on the population.
 
         Species champions (the fittest creature in a species) are carried over
-        to the next generation (elitism).
+        to the next generation (elitism). The worst performing proportion of
+        each species is culled. R.I.P.
         """
         new_population = []
 
@@ -167,8 +171,11 @@ class NeatAlgorithm:
 
         self.population = new_population
 
-    def crossover(self):
-        """Perform crossover on the population."""
+    def mating_season(self):
+        """It is now time for mating season, time to make some babies.
+
+        Replace the population with the next generation. Rip last generation.
+        """
         best_species = max(self.species, key=lambda s: s.champion.fitness)
         the_champ = best_species.champion
         new_population = [species.champion for species in self.species]

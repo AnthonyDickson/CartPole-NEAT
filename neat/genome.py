@@ -9,7 +9,7 @@ from neat.graph import Graph, Connection
 class Gene:
     """Represents a single gene of a creature.
 
-    This stub is here simply to provide a sensible hierarchy for NodeGene and
+    This stub is here simply to provide a logical hierarchy for NodeGene and
     ConnectionGene.
     """
     pass
@@ -106,9 +106,7 @@ class ConnectionGene(Gene):
 class Genome:
     """Represents a creature's genome (a set of genes)."""
 
-    # The probability that the next offspring will be created through mutation
-    # only.
-    p_mutate_only = 0.25
+    # The below constants are for controlling crossover.
 
     # The probability that the genes of the next offspring will be chosen
     # randomly from each parent.
@@ -117,6 +115,14 @@ class Genome:
     # The probability that the genes of the next offspring will be chosen by
     # averaging the weights between parents.
     p_mate_average = 1 - p_mate_choose
+
+    # The below constants are for controlling mutation.
+
+    # The probability to add a node gene.
+    p_add_node = 0.
+
+    # The probability to add a connection gene.
+    p_add_connection = 0.06
 
     # The probability that the next connection gene will be a recurrent one.
     p_recurrent_connection = 0.2
@@ -212,9 +218,7 @@ class Genome:
 
         Returns: a new genotype.
         """
-        if random.random() < Genome.p_mutate_only:
-            return self.copy()
-        elif random.random() < Genome.p_mate_choose:
+        if random.random() < Genome.p_mate_choose:
             return self._crossover_choose(other)
         else:
             return self._crossover_average(other)

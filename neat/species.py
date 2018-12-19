@@ -226,7 +226,7 @@ class Species:
         offspring = []
         pool = list(self.members)
 
-        offspring.append(self.champion.crossover(generation_champ))
+        offspring.append(self.champion.mate(generation_champ))
 
         while len(offspring) < self.allotted_offspring_quota:
             parent1 = random.choice(pool)
@@ -239,9 +239,9 @@ class Species:
             # The parent who 'initiates' crossover (calls crossover) is
             # considered the dominant parent, so matter order matters.
             if parent1.fitness >= parent2.fitness:
-                offspring.append(parent1.crossover(parent2))
+                offspring.append(parent1.mate(parent2))
             else:
-                offspring.append(parent2.crossover(parent1))
+                offspring.append(parent2.mate(parent1))
 
         self.assign_members(offspring)
 
