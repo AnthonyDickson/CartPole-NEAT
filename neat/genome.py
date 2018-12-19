@@ -2,12 +2,14 @@
 
 from neat.graph import Graph, Connection
 
+
 class Gene:
     """Represents a single gene of a creature.
 
     This stub is here simply to provide a sensible hierarchy for NodeGene and ConnectionGene.
     """
     pass
+
 
 class NodeGene(Gene):
     """Represents a node gene."""
@@ -37,6 +39,7 @@ class NodeGene(Gene):
             return self.__name__ == other.__name__
         except AttributeError:
             return False
+
 
 class ConnectionGene(Gene):
     """Represents a connection gene."""
@@ -86,6 +89,7 @@ class ConnectionGene(Gene):
     def __hash__(self):
         return hash(self.connection)
 
+
 class Genome:
     """Represents a creature's genome (a set of genes)."""
 
@@ -101,7 +105,7 @@ class Genome:
         copy = Genome()
         copy.node_genes = [node_gene.copy() for node_gene in self.node_genes]
         copy.connection_genes = [connection_gene.copy() \
-            for connection_gene in self.connection_genes]
+                                 for connection_gene in self.connection_genes]
 
         return copy
 
@@ -179,6 +183,7 @@ class Genome:
         Returns: the length of the genome.
         """
         return len(self.node_genes) + len(self.connection_genes)
+
 
 class Phenotype(Graph):
     """A phenotype, or physical expression, of a genome (genotype)."""

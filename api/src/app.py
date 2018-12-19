@@ -7,16 +7,22 @@ from flask_sqlalchemy import SQLAlchemy
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['SQLALCHEMY_DATABASE_URI']
 db = SQLAlchemy(app)
+# noinspection PyTypeChecker
 api = Api(app)
 
+
+# noinspection PyMethodMayBeStatic
 class HelloWorld(Resource):
     def get(self):
         return {'hello': 'world'}
 
+
+# noinspection PyTypeChecker
 api.add_resource(HelloWorld, '/')
 
 
 class UserAPI(Resource):
+    # noinspection PyMethodMayBeStatic,PyShadowingBuiltins
     def get(self, id=None):
         if id:
             user = User.query.filter_by(id=id).first()
@@ -28,7 +34,10 @@ class UserAPI(Resource):
         else:
             return {'data': [user.to_json() for user in User.query.all()]}
 
+
+# noinspection PyTypeChecker
 api.add_resource(UserAPI, '/users', '/users/<id>')
+
 
 class User(db.Model):
     global db
@@ -46,6 +55,7 @@ class User(db.Model):
             'username': self.username,
             'email': self.email
         }
+
 
 if __name__ == '__main__':
     db.create_all()

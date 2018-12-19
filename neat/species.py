@@ -3,6 +3,7 @@
 import random
 import re
 
+
 class CodeNameGenerator:
     """Generates a random name based on adjectives and nouns used in,
     and proposed for Ubuntu release code names.
@@ -111,6 +112,7 @@ class CodeNameGenerator:
 
         return ' '.join([adjective, noun])
 
+
 class Species:
     """Represents a species."""
     species_count = 0
@@ -207,6 +209,7 @@ class Species:
         Returns: the number of member creatures in the species.
         """
         return len(self.members)
+
 
 if __name__ == '__main__':
     print(CodeNameGenerator().next())

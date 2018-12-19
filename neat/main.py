@@ -7,6 +7,7 @@ import numpy as np
 from neat.creature import Creature
 from neat.species import Species
 
+
 class NeatAlgorithm:
     """An implementation of the NEAT algorithm based off the original paper."""
 
@@ -51,11 +52,12 @@ class NeatAlgorithm:
         step_msg_format = \
             "{:03d}/{:03d} - steps: {:02d} - step time {:02.4f}s"
 
-        episode_complete_msg_format = "{:03d}/{:03d} - avg. steps: {:.2f} "\
-            "- avg. step time: {:02.4f}s - avg. fitness: {:.4f} - total time: {:02.2f}s"
+        episode_complete_msg_format = "{:03d}/{:03d} - avg. steps: {:.2f} " \
+                                      "- avg. step time: {:02.4f}s - avg. fitness: {:.4f} - total time: {:02.2f}s"
+
+        step_history = []
 
         for episode in range(n_episodes):
-            step_history = []
             episode_start = time()
 
             print('Episode {:02d}/{:02d}'.format(episode + 1, n_episodes))
@@ -71,8 +73,7 @@ class NeatAlgorithm:
                     if done:
                         creature.fitness = step + 1
                         step_history.append(step + 1)
-                        print(step_msg_format.format(\
-                            pop_i + 1, self.n_pops, step + 1, time() - pop_start), end='\r')
+                        print(step_msg_format.format(pop_i + 1, self.n_pops, step + 1, time() - pop_start), end='\r')
 
                         break
                 else:
@@ -86,11 +87,12 @@ class NeatAlgorithm:
             total_episode_time = time() - episode_start
             avg_step_time = total_episode_time / self.n_pops
 
-            print(episode_complete_msg_format.format(self.n_pops, \
-                    self.n_pops, avg_steps, avg_step_time, total_episode_time, avg_fitness))
+            print(episode_complete_msg_format.format(self.n_pops, self.n_pops, avg_steps, avg_step_time,
+                                                     total_episode_time, avg_fitness))
 
-        print('Total run time: {:.2f}s - avg. steps: {:.2f} - best steps: {}'.format(\
-            time() - sim_start, np.mean(step_history), np.max(step_history)))
+        print('Total run time: {:.2f}s - avg. steps: {:.2f} - best steps: {}'.format(time() - sim_start,
+                                                                                     np.mean(step_history),
+                                                                                     np.max(step_history)))
         print()
 
     def process_episode(self):
@@ -101,7 +103,7 @@ class NeatAlgorithm:
             self.speciate(creature)
 
         for creature in self.population:
-            self.adjust_fitness(creature)
+            creature.adjust_fitness()
 
         self.allot_offspring_quota()
         self.selection()
@@ -130,16 +132,6 @@ class NeatAlgorithm:
 
             self.species.add(new_species)
             creature.species = new_species
-
-    def adjust_fitness(self, creature):
-        """Update the creature's fitness with the adjusted (shared) fitness.
-
-        Arguments:
-            creature: the creature whose fitness should be adjusted. The
-                      creature must be already speciated.
-        """
-        adjusted_fitness = creature.fitness / len(creature.species)
-        creature.fitness = adjusted_fitness
 
     def allot_offspring_quota(self):
         """Allot the number of offspring each species is allowed for the

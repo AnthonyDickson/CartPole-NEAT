@@ -60,6 +60,7 @@ class NameGenerationUnitTest(unittest.TestCase):
                              'Expected capitalised words, got '
                              '\'%s\'' % name)
 
+
 if __name__ == '__main__':
     random.seed(42)
 

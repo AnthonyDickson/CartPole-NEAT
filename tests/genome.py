@@ -64,6 +64,7 @@ class GenomeUnitTest(unittest.TestCase):
         x = [1, 1, 1]
         self.assertEqual(phenotype1.compute(x), phenotype2.compute(x))
 
+
 if __name__ == '__main__':
     random.seed(42)
 

@@ -1,14 +1,16 @@
 """Describes a computation graph."""
 
+import random
 from collections import defaultdict
 from enum import Enum
 from math import exp
-import random
 
 import numpy as np
 
+
 class Activations:
     """Contains various activation functions."""
+
     @staticmethod
     def identity(x):
         """The identity activation function.
@@ -56,16 +58,17 @@ class Activations:
         return (exp(x) - exp(-x)) / (exp(x) + exp(-x))
 
     @staticmethod
-    def softmax(X):
+    def softmax(x):
         """The softmax activation function..
 
         Arguments:
-            X: The list of values to modify.
+            x: The list of values to modify.
 
         Returns: a list of numbers in the interval [0, 1) representing a probability distribution.
         """
-        z_exp = np.exp(X)
+        z_exp = np.exp(x)
         return z_exp / z_exp.sum()
+
 
 class Node:
     """A node in a neural network computation graph."""
@@ -97,6 +100,7 @@ class Node:
     def __str__(self):
         return 'Node_%d' % self.id
 
+
 # Create distinct node types so we can distinguish them later.
 class Sensor(Node):
     """A sensor node (or input node) in a neural network computation graph."""
@@ -107,6 +111,7 @@ class Sensor(Node):
     def __str__(self):
         return 'Sensor_%d' % self.id
 
+
 class Hidden(Node):
     """A hidden node in a neural network computation graph."""
 
@@ -116,6 +121,7 @@ class Hidden(Node):
     def __str__(self):
         return 'Hidden_%d' % self.id
 
+
 class Output(Node):
     """An output node in a neural network computation graph."""
 
@@ -124,6 +130,7 @@ class Output(Node):
 
     def __str__(self):
         return 'Output_%d' % self.id
+
 
 class Connection:
     """A connection between two nodes in a neural network computation graph."""
@@ -162,11 +169,11 @@ class Connection:
 
     def __str__(self):
         return 'Connection_{}->{}'.format(self.origin_id, self.target_id) + \
-            (' (recurrent)' if self.is_recurrent else '')
+               (' (recurrent)' if self.is_recurrent else '')
 
     def __eq__(self, other):
         return self.origin_id == other.origin_id and \
-            self.target_id == other.target_id
+               self.target_id == other.target_id
 
     def __hash__(self):
         hash_code = 7
@@ -175,24 +182,29 @@ class Connection:
 
         return hash_code
 
+
 class Verbosity(Enum):
     """An enum capturing different verbosity levels for logging."""
     SILENT = 0
     MINIMAL = 1
     FULL = 2
 
+
 class InvalidGraphError(Exception):
     """An error that occurs when a graph is tried to be compiled but it does not have a valid
      structure."""
     pass
 
+
 class GraphNotCompiledError(Exception):
     """An error that occurs when a graph is tried to be used but has not been compiled."""
     pass
 
+
 class InvalidGraphInputError(Exception):
     """An error that occurs when the input to a graph does not match the number of input nodes."""
     pass
+
 
 class Graph:
     """A computation graph for arbitrary neural networks that allows recurrent connections."""
@@ -249,7 +261,7 @@ class Graph:
 
         if not has_path_to_input:
             raise InvalidGraphError('Graph needs at least one sensor (input) to be connected ' + \
-                'to an output.')
+                                    'to an output.')
 
         self.is_compiled = True
 
@@ -291,7 +303,7 @@ class Graph:
         visited.add(node_id)
 
         for node_input in self.connections[node_id]:
-            if not node_input.target_id in visited and node_input.is_enabled:
+            if node_input.target_id not in visited and node_input.is_enabled:
                 if self._has_path_to_input(node_input.target_id, visited.copy()):
                     return True
 
@@ -375,11 +387,11 @@ class Graph:
         """
         if not self.is_compiled:
             raise GraphNotCompiledError('The graph must be compiled before being used, ' + \
-                'or after a change occured to the graph structure.')
+                                        'or after a change occured to the graph structure.')
 
         if len(x) != len(self.sensors):
             raise InvalidGraphInputError('The input dimensions do not match the number of ' + \
-                ' input nodes in the graph.')
+                                         ' input nodes in the graph.')
 
         for node in self.nodes:
             self.nodes[node].prev_output = self.nodes[node].output
@@ -419,7 +431,7 @@ class Graph:
                 node_output += input_connection.weight * target.prev_output
             else:
                 node_output += input_connection.weight * \
-                    self._compute_output(input_connection.target_id, level=level + 1)
+                               self._compute_output(input_connection.target_id, level=level + 1)
 
         node.output = node.activation(node_output)
 

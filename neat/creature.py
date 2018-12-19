@@ -4,6 +4,7 @@ import numpy as np
 from neat.genome import Genome, ConnectionGene, NodeGene, Phenotype
 from neat.graph import Sensor, Output
 
+
 class Creature:
     """A creature that would exist in the NEAT algorithm."""
 
@@ -114,6 +115,10 @@ class Creature:
             mean_difference += abs(gene1.connection.weight - gene2.connection.weight)
 
         return mean_difference / len(aligned_genes)
+
+    def adjust_fitness(self):
+        """Update the creature's fitness with the adjusted (shared) fitness."""
+        self.fitness = self.fitness / len(self.species)
 
     def align_genes(self, other_creature):
         """Find the aligned, disjoint, and excess genes of two creatures.
