@@ -1,4 +1,7 @@
-[![Build Status](https://travis-ci.com/eight0153/CartPole-NEAT.svg?token=mBA1uqs7VwsypGYiKPgD&branch=master)](https://travis-ci.com/eight0153/CartPole-NEAT) 
+[![Build Status](https://travis-ci.com/eight0153/CartPole-NEAT.svg?token=mBA1uqs7VwsypGYiKPgD&branch=master)](https://travis-ci.com/eight0153/CartPole-NEAT)
+[![codebeat badge](https://codebeat.co/badges/a6656f42-36b7-4605-ab72-0153b4d24d37)](https://codebeat.co/projects/github-com-eight0153-cartpole-neat-master)
+[![Maintainability](https://api.codeclimate.com/v1/badges/1678fd2cef75afa22cd1/maintainability)](https://codeclimate.com/github/eight0153/CartPole-NEAT/maintainability)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/08f0846ff60d48f8960bbcb55050cd02)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=eight0153/CartPole-NEAT&amp;utm_campaign=Badge_Grade) 
 [![codecov](https://codecov.io/gh/eight0153/CartPole-NEAT/branch/master/graph/badge.svg?token=uZUyIx10T5)](https://codecov.io/gh/eight0153/CartPole-NEAT)
 # CartPole-NEAT
 In this project I aim to implement [NEAT](https://en.wikipedia.org/wiki/Neuroevolution_of_augmenting_topologies) in python. Then I will try solve the CartPole problem using it. I will use [OpenAI Gym's environment](https://gym.openai.com/envs/CartPole-v0/) for this. I also plan to make this program multi-threaded so that I can have multiple runs (with possibly different configurations) running in parallel.
