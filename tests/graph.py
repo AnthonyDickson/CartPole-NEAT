@@ -1,7 +1,8 @@
 import random
 import unittest
 
-from neat.graph import Sensor, Hidden, Output, Connection, Graph, GraphNotCompiledError, InvalidGraphError, InvalidGraphInputError
+from neat.graph import Sensor, Hidden, Output, Graph, InvalidGraphError
+
 
 class GraphUnitTest(unittest.TestCase):
     def test_compile_raises_error(self):
@@ -9,13 +10,13 @@ class GraphUnitTest(unittest.TestCase):
         self.assertRaises(InvalidGraphError, g.compile)
 
         s1 = Sensor()
-        g.add_node(s1)   
-        
+        g.add_node(s1)
+
         self.assertRaises(InvalidGraphError, g.compile)
-        
+
         o1 = Output()
         g.add_node(o1)
-        
+
         self.assertRaises(InvalidGraphError, g.compile)
 
     def test_comutation(self):
@@ -61,4 +62,3 @@ if __name__ == '__main__':
     random.seed(42)
 
     unittest.main()
-    

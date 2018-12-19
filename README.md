@@ -1,4 +1,5 @@
-[![Build Status](https://travis-ci.com/eight0153/CartPole-NEAT.svg?token=mBA1uqs7VwsypGYiKPgD&branch=master)](https://travis-ci.com/eight0153/CartPole-NEAT)
+[![Build Status](https://travis-ci.com/eight0153/CartPole-NEAT.svg?token=mBA1uqs7VwsypGYiKPgD&branch=master)](https://travis-ci.com/eight0153/CartPole-NEAT) 
+[![codecov](https://codecov.io/gh/eight0153/CartPole-NEAT/branch/master/graph/badge.svg?token=uZUyIx10T5)](https://codecov.io/gh/eight0153/CartPole-NEAT)
 # CartPole-NEAT
 In this project I aim to implement [NEAT](https://en.wikipedia.org/wiki/Neuroevolution_of_augmenting_topologies) in python. Then I will try solve the CartPole problem using it. I will use [OpenAI Gym's environment](https://gym.openai.com/envs/CartPole-v0/) for this. I also plan to make this program multi-threaded so that I can have multiple runs (with possibly different configurations) running in parallel.
 

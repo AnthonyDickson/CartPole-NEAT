@@ -17,8 +17,8 @@ class CodeNameGenerator:
     key_pattern = re.compile(r"^\[([A-Za-z])\]$")
     comment_pattern = re.compile(r"^#.*")
 
-    def __init__(self, data_path='neat/data/ubuntu/', adjective_file='adjectives.txt', \
-            noun_file='nouns.txt'):
+    def __init__(self, data_path='neat/data/ubuntu/', adjective_file='adjectives.txt',
+                 noun_file='nouns.txt'):
         """Create a name generator based on Ubuntu code names.
 
         Data files should have the following format:
@@ -32,7 +32,7 @@ class CodeNameGenerator:
 
         Arguments:
             data_path: where the data files containing the adjective and animal names are located.
-            adjective_files: the name of the file that contains the adjectives.
+            adjective_file: the name of the file that contains the adjectives.
             noun_file: the name of the file that contains the animal names.
         """
         filepath = data_path + adjective_file
@@ -186,9 +186,11 @@ class Species:
         self.champion = ranked[-1]
         num_to_kill = int(how_many * len(ranked))
         self.members = set(ranked[num_to_kill:])
-        self.representative = random.choice(self.members)
 
-        return list(self.members)
+        survivor_list = list(self.members)
+        self.representative = random.choice(survivor_list)
+
+        return survivor_list
 
     def __str__(self):
         return '%s (Species_%d)' % (self.name, self.id)

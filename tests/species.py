@@ -7,6 +7,7 @@ import unittest
 
 from neat.species import CodeNameGenerator
 
+
 class NameGenerationUnitTest(unittest.TestCase):
     """Test cases for the name generation code in the species module."""
 
@@ -25,16 +26,16 @@ class NameGenerationUnitTest(unittest.TestCase):
 
         for test_string, expected in tests:
             actual = CodeNameGenerator.process(test_string)
-            self.assertEqual(actual, expected, \
-                'Expected %s, but got %s.' % (expected, actual))
+            self.assertEqual(actual, expected,
+                             'Expected %s, but got %s.' % (expected, actual))
 
     def test_loads_from_file(self):
         """Attempt to intialise a CodeNameGenerator name generator.
 
         Success if no errors raised and things are loaded correctly.
         """
-        self.assertRaises(FileNotFoundError, \
-            lambda: CodeNameGenerator(data_path='apaththatdoesntexist'))
+        self.assertRaises(FileNotFoundError,
+                          lambda: CodeNameGenerator(data_path='apaththatdoesntexist'))
 
         name_gen = CodeNameGenerator(NameGenerationUnitTest.data_path)
 
@@ -55,9 +56,9 @@ class NameGenerationUnitTest(unittest.TestCase):
             name = name_gen.next()
 
             self.assertGreater(len(name), 0)
-            self.assertFalse(re.match(capitalised_words, name) is None, \
-                'Expected capitalised words, got '\
-                '\'%s\'' % name)
+            self.assertFalse(re.match(capitalised_words, name) is None,
+                             'Expected capitalised words, got '
+                             '\'%s\'' % name)
 
 if __name__ == '__main__':
     random.seed(42)
