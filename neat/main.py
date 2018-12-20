@@ -1,5 +1,4 @@
 """Implements the NEAT algorithm."""
-
 from time import time
 
 import numpy as np

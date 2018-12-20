@@ -8,4 +8,4 @@ doesn't seem to affect normal execution via the command 'python -m neat'.
 from neat.__main__ import main
 
 if __name__ == '__main__':
-    main()
+    main(debug_mode=True)

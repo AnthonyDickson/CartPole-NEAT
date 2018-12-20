@@ -410,7 +410,8 @@ class Genome:
                 node_gene.node.bias += random.gauss(0, Genome.perturb_range)
 
         for connection_gene in self.connection_genes:
-            if random.random() < Genome.p_perturb:
+            if connection_gene.connection.is_enabled and \
+                    random.random() < Genome.p_perturb:
                 connection_gene.connection.weight += \
                     random.gauss(0, Genome.perturb_range)
 
