@@ -43,12 +43,14 @@ class NeatAlgorithm:
 
         return population
 
-    def train(self, n_episodes=100, n_steps=200):
+    def train(self, n_episodes=100, n_steps=200, debug_mode=False):
         """Train species of individuals.
 
         Arguments:
             n_episodes: The number of episodes to trian for.
             n_steps: The maximum number of steps per individual per episode.
+            debug_mode: If set to True, some features that aren't intended for
+                        testing environments and such are disabled.
         """
         sim_start = time()
 
@@ -106,7 +108,8 @@ class NeatAlgorithm:
                       np.max(step_history)))
         print()
 
-        self.post_training_stuff()
+        if not debug_mode:
+            self.post_training_stuff()
 
     def post_training_stuff(self):
         """Do post training stuff."""
