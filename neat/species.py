@@ -27,9 +27,9 @@ class CodeNameGenerator:
             - Comments start the line with a # symbol.
             - Words should be grouped by the first letter of the word.
             - A marker should be placed at the top of  each group of words,
-                and it should contain the corresponding letter captilised and
+                and it should contain the corresponding letter capitalised and
                 surrounded in brackets. For example, all adjectives starting
-                with 'A' or 'a' should be grouped togetherand come after the
+                with 'A' or 'a' should be grouped together and come after the
                 marker '[A]'.
 
         Arguments:
@@ -163,6 +163,8 @@ class Species:
         self.representative = None
         self.allotted_offspring_quota = 0
         self.champion = None
+        self.is_extinct = False
+        self.age = 0  # How many generations the species has survived.
 
     @property
     def mean_fitness(self):
@@ -226,7 +228,11 @@ class Species:
         offspring = []
         pool = list(self.members)
 
-        offspring.append(self.champion.mate(generation_champ))
+        if self.allotted_offspring_quota > 1:
+            offspring.append(self.champion.copy())
+
+        if len(offspring) < self.allotted_offspring_quota:
+            offspring.append(self.champion.mate(generation_champ))
 
         while len(offspring) < self.allotted_offspring_quota:
             parent1 = random.choice(pool)
@@ -243,15 +249,19 @@ class Species:
             else:
                 offspring.append(parent2.mate(parent1))
 
-        self.assign_members(offspring)
+        if len(offspring) == 0:
+            self.is_extinct = True  # R.I.P.
+        else:
+            self.assign_members(offspring)
+            self.age += 1
 
         return offspring
 
     def __str__(self):
-        return '%s (Species_%d)' % (self.name, self.id)
+        return '%s' % self.name
 
     def __repr__(self):
-        return self.__str__()
+        return '%s (Species_%d)' % (self.name, self.id)
 
     def __hash__(self):
         return self.id

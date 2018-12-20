@@ -15,7 +15,9 @@ class NeatAlgorithmUnitTest(unittest.TestCase):
     """Test cases for the neat algorithm in the main module."""
 
     def test_runs_without_setting_fire_to_the_server_room(self):
-        """Test whether the main training loop can be run end to end without blowing up."""
+        """Test whether the main training loop can be run end to end without
+        blowing up.
+        """
         f = None
 
         try:
@@ -26,7 +28,7 @@ class NeatAlgorithmUnitTest(unittest.TestCase):
             env = gym.make('CartPole-v0')
             neat = NeatAlgorithm(env)
 
-            neat.train()
+            neat.train(n_episodes=20)
         except Exception as error:
             raise error
         finally:

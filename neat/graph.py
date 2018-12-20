@@ -411,8 +411,8 @@ class Graph:
         """
         if not self.is_compiled:
             raise GraphNotCompiledError('The graph must be compiled before '
-                                        'being used, or after a change occured'
-                                        'to the graph structure.')
+                                        'being used, or after a change '
+                                        'occurred to the graph structure.')
 
         if len(x) != len(self.sensors):
             raise InvalidGraphInputError('The input dimensions do not match '

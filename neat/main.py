@@ -52,15 +52,15 @@ class NeatAlgorithm:
         sim_start = time()
 
         step_msg_format = \
-            "{:03d}/{:03d} - steps: {:02d} - step time {:02.4f}s"
+            "\r{:03d}/{:03d} - steps: {:02d} - step time {:02.4f}s"
 
-        episode_complete_msg_format = "{:03d}/{:03d} - " \
-                                      "avg. steps: {:.2f} - " \
+        episode_complete_msg_format = "\r{:03d}/{:03d} - " \
+                                      "mean steps: {:.2f} - " \
+                                      "median steps: {:.2f} - " \
                                       "avg. step time: {:02.4f}s - " \
-                                      "avg. fitness: {:.4f} - " \
                                       "total time: {:.4f}s"
 
-        step_history = []
+        step_history = [[] for _ in range(n_episodes)]
 
         for episode in range(n_episodes):
             episode_start = time()
@@ -77,28 +77,28 @@ class NeatAlgorithm:
 
                     if done:
                         creature.fitness = step + 1
-                        step_history.append(step + 1)
-                        print(step_msg_format.format(pop_i + 1, self.n_pops,
-                                                     step + 1,
-                                                     time() - pop_start),
-                              end='\r')
+                        step_history[episode].append(step + 1)
 
                         break
                 else:
                     creature.fitness = n_steps
 
+                print(step_msg_format.format(pop_i + 1, self.n_pops,
+                                             step_history[episode][-1],
+                                             time() - pop_start),
+                      end='')
+
             self.do_the_thing()
 
-            avg_fitness = sum(c.fitness for c in self.population) / self.n_pops
-
-            avg_steps = np.mean(step_history)
+            mean_steps = np.mean(step_history[episode])
+            median_steps = np.median(step_history[episode])
             total_episode_time = time() - episode_start
             avg_step_time = total_episode_time / self.n_pops
 
             print(episode_complete_msg_format.format(self.n_pops, self.n_pops,
-                                                     avg_steps, avg_step_time,
-                                                     total_episode_time,
-                                                     avg_fitness))
+                                                     mean_steps, median_steps,
+                                                     avg_step_time,
+                                                     total_episode_time))
 
         print('Total run time: {:.2f}s - avg. steps: {:.2f} - best steps: {}'
               .format(time() - sim_start, np.mean(step_history),
@@ -154,7 +154,7 @@ class NeatAlgorithm:
 
         for species, mean_fitness in zip(self.species, species_mean_fitness):
             species.allotted_offspring_quota = \
-                mean_fitness / sum_mean_species_fitness * self.n_pops
+                int(mean_fitness / sum_mean_species_fitness * self.n_pops)
 
     def not_so_natural_selection(self):
         """Perform selection on the population.
@@ -176,20 +176,34 @@ class NeatAlgorithm:
 
         Replace the population with the next generation. Rip last generation.
         """
-        best_species = max(self.species, key=lambda s: s.champion.fitness)
+        ranked_species = sorted(self.species, key=lambda s: s.champion.fitness)
+        worst_species = ranked_species[0]
+        best_species = ranked_species[-1]
         the_champ = best_species.champion
-        new_population = [species.champion for species in self.species]
-        new_population.append(the_champ)
+        new_population = []
 
         total_expected_offspring = sum([species.allotted_offspring_quota
                                         for species in self.species])
 
         if total_expected_offspring < self.n_pops:
-            best_species.allottd_offspring_quota += self.n_pops - \
-                                                    total_expected_offspring
+            pop_deficit = self.n_pops - total_expected_offspring
+
+            best_species.allotted_offspring_quota += pop_deficit
+            total_expected_offspring += pop_deficit
+        elif total_expected_offspring > self.n_pops:
+            pop_surplus = self.n_pops - total_expected_offspring
+            worst_species.allotted_offspring_quota -= pop_surplus
+            total_expected_offspring -= pop_surplus
 
         for species in self.species:
             new_population += species.next_generation(the_champ,
                                                       self.population)
+
+        for species in filter(lambda s: s.is_extinct, self.species):
+            print('\n' + '*' * 80)
+            print("R.I.P. The species %s is kill after %d generations." %
+                  (species, species.age))
+            print('*' * 80 + '\n')
+        self.species = set(filter(lambda s: not s.is_extinct, self.species))
 
         self.population = new_population
