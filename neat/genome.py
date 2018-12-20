@@ -139,7 +139,6 @@ class Genome:
     def __init__(self):
         self.node_genes = []
         self.connection_genes = set()
-        self.mutation_method = ''
 
     def copy(self):
         """Make a copy of a genome.
@@ -398,11 +397,9 @@ class Genome:
 
         if random.random() < Genome.p_add_node:
             self._give_extra_brain_cell()
-            self.mutation_method = 'node'
 
         if random.random() < Genome.p_add_connection:
             self._build_bridges_not_walls()
-            self.mutation_method = 'connection'
 
     def _perturb(self):
         """Add a small positive or negative number to the weights and biases

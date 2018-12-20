@@ -3,6 +3,7 @@
 from time import time
 
 import numpy as np
+from gym import wrappers
 
 from neat.creature import Creature
 from neat.species import Species
@@ -104,6 +105,51 @@ class NeatAlgorithm:
               .format(time() - sim_start, np.mean(step_history),
                       np.max(step_history)))
         print()
+
+        self.post_training_stuff()
+
+    def post_training_stuff(self):
+        """Do post training stuff."""
+        print('Here are the species that made it to the end and the number of '
+              'creatures in each of them:')
+
+        for species in self.species:
+            print('%s - %d creatures.' % (species, len(species)))
+
+        best_species = max(self.species, key=lambda s: s.champion.fitness)
+        print('Out of these species, the best species was %s.' % best_species)
+
+        print('The overall champion was a creature with %d nodes and %d '
+              'connections in its neural network.' %
+              (len(best_species.champion.genotype.node_genes),
+               len(best_species.champion.genotype.connection_genes)))
+
+        self.record_video(best_species.champion)
+
+        self.env.close()
+
+    def record_video(self, creature):
+        """Record a video of the creature trying to solve the problem.
+
+        Arguments:
+            creature: the creature to record.
+        """
+        print("Recording fittest creature.")
+
+        env = wrappers.Monitor(self.env, './data/videos/%s' % time())
+
+        for i_episode in range(20):
+            observation = env.reset()
+
+            for step in range(200):
+                env.render()
+
+                action = creature.get_action(observation)
+                observation, _, done, _ = env.step(action)
+
+                if done:
+                    print("Episode finished after {} timesteps".format(step + 1))
+                    break
 
     def do_the_thing(self):
         """Do the post-episode stuff such as speciating, adjusting creature
