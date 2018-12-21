@@ -219,6 +219,7 @@ class Species:
         self.total_num_members += 1
         creature.name_suffix = 'the %s' % \
                                Species.to_ordinal(self.total_num_members)
+        creature.species = self
 
     def assign_members(self, members):
         """Assign all the members of this species.
