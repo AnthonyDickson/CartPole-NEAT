@@ -134,7 +134,7 @@ class NeatAlgorithm:
             print('%s - %d creatures - %d generations old.' %
                   (species, len(species), species.age))
 
-        best_species = max(self.species, key=lambda s: s.champion.fitness)
+        best_species = max(self.species, key=lambda s: s.mean_fitness)
 
         print()
         print('Out of these species, the best species was %s.' % best_species)
@@ -230,7 +230,6 @@ class NeatAlgorithm:
                 if creature.distance(species_i.representative) < \
                         Species.compatibility_threshold:
                     species_i.add(creature)
-                    creature.species = species_i
 
                     break
             else:
@@ -239,7 +238,6 @@ class NeatAlgorithm:
                 new_species.representative = creature
 
                 self.species.add(new_species)
-                creature.species = new_species
 
     def adjust_fitness(self):
         """Adjust the fitness of the population."""

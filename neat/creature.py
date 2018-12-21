@@ -46,8 +46,9 @@ class Creature:
         """
         self.raw_fitness = 0
         self.fitness = 0
-        self.species = None
+        self._species = None
         self.name_suffix = None
+        self.past_species = []
 
         if n_inputs is None or n_outputs is None:
             self.genotype = None
@@ -111,6 +112,17 @@ class Creature:
 
         return 'S%dH%dO%dC%dR%d' % (n_sensors, n_hidden, n_outputs,
                                     n_connections, n_recurrent)
+
+    @property
+    def species(self):
+        return self._species
+
+    @species.setter
+    def species(self, new_species):
+        if self.species:
+            self.past_species.append(self.species.name)
+
+        self._species = new_species
 
     def get_action(self, x):
         """Get the creature's action for the given input.
