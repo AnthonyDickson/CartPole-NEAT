@@ -45,20 +45,16 @@ class NeatAlgorithm:
     @property
     def champ(self):
         """The best performing creature, who is an all-round champ."""
-        self.sort_population()
+        self.population = sorted(self.population)
 
         return self.population[-1]
 
     @property
     def chump(self):
         """The worst performing creature, who is an all-round chump."""
-        self.sort_population()
+        self.population = sorted(self.population)
 
         return self.population[0]
-
-    def sort_population(self):
-        self.population = sorted(self.population,
-                                 key=lambda c: c.raw_fitness + c.fitness)
 
     def train(self, n_episodes=100, n_steps=200, debug_mode=False):
         """Train species of individuals.
@@ -98,7 +94,7 @@ class NeatAlgorithm:
                 else:
                     creature.fitness = n_steps
 
-                fitness_history[episode].append(creature.fitness + 1)
+                fitness_history[episode].append(creature.fitness)
                 mean_fitness = np.mean(fitness_history[episode])
                 median_fitness = np.median(fitness_history[episode])
                 episode_time = time() - episode_start
@@ -109,11 +105,17 @@ class NeatAlgorithm:
                                                          mean_time_per_creature,
                                                          episode_time),
                       end='')
+
+            if episode >= 100 and \
+                    np.mean(fitness_history[episode - 100:episode]) > 195.0:
+                print('Solved in %d episodes :)' % (episode + 1))
+                break
+
             print()
-
             self.do_the_thing()
-
             print('Total episode time: %.4fs.\n' % (time() - episode_start))
+        else:
+            print('Could not solve in %d episodes :(' % n_episodes)
 
         print('Total run time: {:.2f}s - avg. steps: {:.2f} - best steps: {}'
               .format(time() - sim_start, np.mean(fitness_history),

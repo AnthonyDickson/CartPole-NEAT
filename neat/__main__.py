@@ -32,9 +32,9 @@ def main(debug_mode=False):
         if args.debug:
             debug_mode = True
 
-            n_episodes = args.n_episodes
-            n_steps = args.n_steps
-            n_pops = args.n_pops
+        n_episodes = args.n_episodes
+        n_steps = args.n_steps
+        n_pops = args.n_pops
 
     if debug_mode:
         random.seed(42)

@@ -1,4 +1,4 @@
-from graph import Connection
+from neat.graph import Connection
 
 
 class Gene:
@@ -50,6 +50,9 @@ class NodeGene(Gene):
     def __hash__(self):
         # Use negative node id to avoid collisions with connection genes.
         return -self.node.id
+
+    def __lt__(self, other):
+        return self.node.id < other.node.id
 
 
 class ConnectionGene(Gene):
@@ -116,3 +119,6 @@ class ConnectionGene(Gene):
 
     def __hash__(self):
         return self.innovation_number
+
+    def __lt__(self, other):
+        return self.innovation_number < other.innovation_number

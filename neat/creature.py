@@ -3,8 +3,9 @@ import random
 
 import numpy as np
 
-from neat.genome import Genome, ConnectionGene, NodeGene, Phenotype
+from neat.genome import Genome, ConnectionGene, NodeGene
 from neat.graph import Sensor, Output
+from neat.phenotype import Phenotype
 
 
 class Creature:
@@ -175,7 +176,9 @@ class Creature:
                  itself is also a tuple which contains the sets of aligned
                  genes for each creature.
         """
-        return self.genotype.align_genes(other_creature.genotype)
+        is_dominant = self.fitness >= other_creature.fitness
+
+        return self.genotype.align_genes(other_creature.genotype, is_dominant)
 
     def mate(self, other):
         """Mate, it's time to mate. Create a baby creature from two creatures.
@@ -205,16 +208,9 @@ class Creature:
         """Mutate a creature's genotype."""
         self.genotype.mutate()
 
-    def __cmp__(self, other_creature):
-        if self.fitness < other_creature.fitness:
-            return -1
-        elif self.fitness > other_creature.fitness:
-            return 1
-        else:
-            return 0
-
     def __lt__(self, other_creature):
-        return self.__cmp__(other_creature) < 0
+        return (self.raw_fitness + self.fitness) < \
+               (other_creature.raw_fitness + other_creature.fitness)
 
     def __str__(self):
         return '%s (%s)' % (self.name, self.scientific_name)

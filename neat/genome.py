@@ -3,8 +3,8 @@ creatures in NEAT.
 """
 import random
 
-from gene import NodeGene, ConnectionGene
-from neat.graph import Graph, Hidden, Sensor, Output
+from neat.gene import NodeGene, ConnectionGene
+from neat.graph import Hidden, Sensor, Output
 
 
 class Genome:
@@ -92,11 +92,13 @@ class Genome:
         for gene in genes:
             self.add_gene(gene)
 
-    def align_genes(self, other_genotype):
+    def align_genes(self, other_genotype, is_dominant):
         """Find the aligned, disjoint, and excess genes of two genotypes.
 
         Arguments:
             other_genotype: the genotype to align with.
+            is_dominant: whether the genes in this genotype are to be
+                             considered dominant.
 
         Returns: a 3-tuple where the elements are a set of aligned genes,
                  disjoint genes, and excess genes. The aligned genes element
@@ -114,7 +116,12 @@ class Genome:
         # is the aligned genes from the other genotype.
         aligned_genes = (other_genes.intersection(genes),
                          genes.intersection(other_genes))
-        unaligned_genes = genes.symmetric_difference(other_genes)
+
+        if is_dominant:
+            unaligned_genes = genes.difference(other_genes)
+        else:
+            unaligned_genes = other_genes.difference(genes)
+
         disjoint_genes = set(
             filter(lambda gene: gene.innovation_number <= excess_threshold,
                    unaligned_genes)
@@ -123,40 +130,35 @@ class Genome:
 
         return list(zip(*aligned_genes)), disjoint_genes, excess_genes
 
-    def crossover(self, other):
+    def crossover(self, other, is_dominant=True):
         """Perform crossover between two genotypes.
 
-        The genotype that this method is called on is considered the dominant
-        genotype, and genes will be inherited from this genotype when choosing
-        between this genotype and the other.
+        If is_dominant is True, the genes in this genotype are considered
+        dominant, and unaligned genes are inherited from this genotype.
+        Otherwise, the genes in this genotype are considered recessive, and
+        unaligned genes are inherited from the other genotype. Aligned genes
+        are unaffected by gene dominance.
 
         Arguments:
                 other: the other genotype to crossover with.
+                is_dominant: whether the genes in this genotype are to be
+                             considered dominant.
 
         Returns: a new genotype.
         """
         if random.random() < Genome.p_mate_choose:
-            genotype = self._crossover_choose(other)
+            genotype = self._crossover(other, Genome._combine_randomly,
+                                       is_dominant)
         else:
-            genotype = self._crossover_average(other)
+            genotype = self._crossover(other, Genome._combine_average,
+                                       is_dominant)
 
         if random.random() < Genome.p_re_enable_connection:
             self._reenable_random_connection()
 
         return genotype
 
-    def _reenable_random_connection(self):
-        """Re-enable a previously disabled connection gene."""
-        disabled_genes = list(filter(lambda cg: not cg.is_enabled,
-                                     self.connection_genes))
-
-        if len(disabled_genes) == 0:
-            return
-
-        gene = random.choice(disabled_genes)
-        gene.connection.is_enabled = True
-
-    def _crossover_choose(self, other):
+    def _crossover(self, other, combining_method, is_dominant):
         """Perform crossover between two genotypes by choosing genes randomly
         from each parent.
 
@@ -166,11 +168,18 @@ class Genome:
 
         Arguments:
                 other: the other genotype to crossover with.
+                combining_method: How to combine the aligned genes. Should be
+                                  either _combine_randomly or _combine_average.
+                is_dominant: whether the genes in this genotype are to be
+                             considered dominant.
 
         Returns: a new genotype.
         """
-        node_genes = self._choose_node_genes(other)
-        connection_genes = self._choose_connection_genes(other)
+        node_genes = self._choose_genes(other, self._align_node_genes,
+                                        combining_method, is_dominant)
+        connection_genes = set(self._choose_genes(other, self.align_genes,
+                                                  combining_method,
+                                                  is_dominant))
 
         genotype = Genome()
         genotype.add_genes(node_genes)
@@ -178,7 +187,8 @@ class Genome:
 
         return genotype
 
-    def _choose_node_genes(self, other):
+    def _choose_genes(self, other, alignment_method, combining_method,
+                      is_dominant):
         """Randomly choose node genes from each genotype.
 
         The aligned genes are each taken from a random genotype and the
@@ -186,26 +196,45 @@ class Genome:
 
         Arguments:
                 other: the other genotype to crossover with.
+                alignment_method: How to align the genes, also decides which
+                                  genes to align. Should be either align_genes
+                                  or _align_node_genes.
+                combining_method: How to combine the aligned genes. Should be
+                                  either _combine_randomly or _combine_average.
+                is_dominant: whether the genes in this genotype are to be
+                             considered dominant.
 
         Returns: the selection of node genes from both genotypes.
         """
-        aligned_node_genes, unaligned_node_genes = \
-            self._align_node_genes(other)
+        if alignment_method == self.align_genes:
+            averaging_attribute = 'weight'
+        else:
+            averaging_attribute = 'bias'
 
-        node_genes = Genome._combine_randomly(aligned_node_genes)
-        node_genes += unaligned_node_genes
-        node_genes = sorted(node_genes, key=lambda ng: ng.node.id)
+        aligned, disjoint, excess = alignment_method(other, is_dominant)
 
-        return node_genes
+        if combining_method == Genome._combine_randomly:
+            genes = combining_method(aligned)
+        else:  # combining via averaging
+            genes = combining_method(aligned, averaging_attribute)
 
-    def _align_node_genes(self, other):
+        genes += disjoint
+        genes += excess
+
+        genes = sorted(genes)
+
+        return genes
+
+    def _align_node_genes(self, other, is_dominant):
         """Align the node genes between two genotypes.
 
         Arguments:
                 other: the other genotype to align with.
+                is_dominant: whether the genes in this genotype are to be
+                             considered dominant.
 
-        Returns: a tuple containing a list of aligned gene pairs and a list of
-                 unaligned node genes (both disjoint and excess).
+        Returns: a tuple containing a list of aligned gene pairs, disjoint
+                 genes, and excess genes.
         """
         aligned_with_self = set(other.node_genes) \
             .intersection(self.node_genes)
@@ -213,31 +242,23 @@ class Genome:
             .intersection(other.node_genes)
         aligned_node_genes = zip(aligned_with_self, aligned_with_other)
 
-        unaligned_node_genes = set(self.node_genes) \
-            .symmetric_difference(other.node_genes)
+        if is_dominant:
+            unaligned_node_genes = set(self.node_genes) \
+                .difference(other.node_genes)
+        else:
+            unaligned_node_genes = set(other.node_genes) \
+                .difference(self.node_genes)
 
-        return list(aligned_node_genes), list(unaligned_node_genes)
+        max_node_id = max(self.node_genes).node.id
+        max_other_node_id = max(other.node_genes).node.id
 
-    def _choose_connection_genes(self, other):
-        """Randomly choose connection genes from each genotype.
+        excess_threshold = min(max_node_id, max_other_node_id)
 
-        The aligned genes are each taken from a random genotype and the
-        unaligned genes (i.e. disjointed and excess genes) are all inherited.
+        disjointed = set(filter(lambda ng: ng.node.id <= excess_threshold,
+                                unaligned_node_genes))
+        excess = unaligned_node_genes.difference(disjointed)
 
-        Arguments:
-                other: the other genotype to crossover with.
-
-        Returns: the selection of connection genes from both genotypes.
-        """
-        aligned, disjointed, excess = self.align_genes(other)
-
-        connection_genes = set(Genome._combine_randomly(aligned))
-        connection_genes.update(disjointed)
-        connection_genes.update(excess)
-
-        connection_genes = sorted(connection_genes,
-                                  key=lambda cg: cg.innovation_number)
-        return connection_genes
+        return list(aligned_node_genes), list(disjointed), list(excess)
 
     @staticmethod
     def _combine_randomly(aligned):
@@ -286,38 +307,16 @@ class Genome:
 
         return selection
 
-    def _crossover_average(self, other, is_dominant):
-        """Perform crossover between two genotypes by averaging weights and
-        biases in aligned genes.
+    def _reenable_random_connection(self):
+        """Re-enable a previously disabled connection gene."""
+        disabled_genes = list(filter(lambda cg: not cg.is_enabled,
+                                     self.connection_genes))
 
-        The genotype that this method is called on is considered the dominant
-        genotype, and genes will be inherited from this genotype when choosing
-        between this genotype and the other.
+        if len(disabled_genes) == 0:
+            return
 
-        Arguments:
-                other: the other genotype to crossover with.
-
-        Returns: a new genotype.
-        """
-        aligned_node_genes, unaligned_node_genes = \
-            self._align_node_genes(other)
-
-        node_genes = Genome._combine_average(aligned_node_genes, 'bias')
-        node_genes += unaligned_node_genes
-        node_genes = sorted(node_genes, key=lambda ng: ng.node.id)
-
-        aligned, disjoint, excess = self.align_genes(other)
-
-        connection_genes = Genome._combine_average(aligned, 'weight')
-
-        connection_genes += disjoint
-        connection_genes += excess
-
-        genotype = Genome()
-        genotype.add_genes(node_genes)
-        genotype.add_genes(connection_genes)
-
-        return genotype
+        gene = random.choice(disabled_genes)
+        gene.connection.is_enabled = True
 
     def mutate(self):
         """Mutate a given genotype."""
@@ -405,24 +404,3 @@ class Genome:
         return len(self.node_genes) + len(self.connection_genes)
 
 
-class Phenotype(Graph):
-    """A phenotype, or physical expression, of a genome (genotype)."""
-
-    def __init__(self, genome):
-        """Generate the phenotype, or physical expression, of a genome.
-
-        Arguments:
-            genome: the genome to express.
-        """
-        super().__init__()
-
-        for node_gene in genome.node_genes:
-            node = node_gene.node
-            node.id = genome.node_genes.index(node_gene)
-
-            self.add_node(node)
-
-        for connection_gene in genome.enabled_connection_genes:
-            self.add_connection(connection_gene.connection)
-
-        self.compile()
