@@ -73,10 +73,11 @@ class NeatAlgorithm:
                                       "mean time per creature: {:02.4f}s - " \
                                       "total time: {:.4f}s"
 
-        fitness_history = [[] for _ in range(n_episodes)]
+        fitness_history = []
 
         for episode in range(n_episodes):
             episode_start = time()
+            fitness_history.append([])
 
             print('Episode {:02d}/{:02d}'.format(episode + 1, n_episodes))
 
@@ -107,8 +108,8 @@ class NeatAlgorithm:
                       end='')
 
             if episode >= 100 and \
-                    np.mean(fitness_history[episode - 100:episode]) > 195.0:
-                print('Solved in %d episodes :)' % (episode + 1))
+                    np.mean(fitness_history[episode - 100:episode]) >= 195.0:
+                print('\nSolved in %d episodes :)' % (episode + 1))
                 break
 
             print()
@@ -138,6 +139,10 @@ class NeatAlgorithm:
 
         print()
         print('Out of these species, the best species was %s.' % best_species)
+
+        oldest_creature = max(self.population, key=lambda c: c.age)
+        print('The oldest creature was %s, who lived for %d generations.' %
+              (oldest_creature, oldest_creature.age))
 
         print('The overall champion was %s who had %d nodes and %d '
               'connections in its neural network.' %
@@ -290,6 +295,9 @@ class NeatAlgorithm:
         for species in self.species:
             survivors = species.cull_the_weak(NeatAlgorithm.survival_threshold)
             new_population += survivors
+
+        for creature in new_population:
+            creature.age += 1
 
         self.population = new_population
 

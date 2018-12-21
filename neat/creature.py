@@ -49,6 +49,7 @@ class Creature:
         self._species = None
         self.name_suffix = None
         self.past_species = []
+        self.age = 0
 
         if n_inputs is None or n_outputs is None:
             self.genotype = None
@@ -92,6 +93,11 @@ class Creature:
         copy = Creature()
         copy.genotype = self.genotype.copy()
         copy.phenotype = Phenotype(copy.genotype)
+
+        copy.age = self.age
+        copy.name_suffix = self.name_suffix
+        copy.past_species = self.past_species
+        copy.species = self.species
 
         return copy
 
