@@ -30,6 +30,14 @@ class NodeGene(Gene):
 
         return copy
 
+    @property
+    def bias(self):
+        return self.node.bias
+
+    @bias.setter
+    def bias(self, value):
+        self.node.bias = value
+
     def __str__(self):
         return 'Node_gene(%s)' % self.node
 
@@ -85,6 +93,14 @@ class ConnectionGene(Gene):
         copy.innovation_number = self.innovation_number
 
         return copy
+
+    @property
+    def weight(self):
+        return self.connection.weight
+
+    @weight.setter
+    def weight(self, value):
+        self.connection.weight = value
 
     def __str__(self):
         return 'Connection_Gene_%d(%s)' % (self.innovation_number,

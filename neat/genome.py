@@ -263,7 +263,30 @@ class Genome:
 
         return selection
 
-    def _crossover_average(self, other):
+    @staticmethod
+    def _combine_average(aligned, attribute):
+        """Combines list of aligned gene pairs by averaging a common attribute.
+
+        Arguments;
+            aligned: the list of aligned gene pairs.
+            container: the encapsulating .
+            attribute: the attribute to average.
+
+        Returns: a list of averaged genes.
+        """
+        selection = []
+
+        for gene1, gene2 in aligned:
+            gene = gene1.copy()
+
+            avg = 0.5 * (getattr(gene1, attribute) + getattr(gene2, attribute))
+            setattr(gene, attribute, avg)
+
+            selection.append(gene)
+
+        return selection
+
+    def _crossover_average(self, other, is_dominant):
         """Perform crossover between two genotypes by averaging weights and
         biases in aligned genes.
 
@@ -276,28 +299,16 @@ class Genome:
 
         Returns: a new genotype.
         """
-        node_genes = []
-
         aligned_node_genes, unaligned_node_genes = \
             self._align_node_genes(other)
 
-        for node_gene, other_node_gene in aligned_node_genes:
-            gene = node_gene.copy()
-            gene.node.bias = 0.5 * (gene.node.bias +
-                                    other_node_gene.node.bias)
-            node_genes.append(gene)
-
+        node_genes = Genome._combine_average(aligned_node_genes, 'bias')
         node_genes += unaligned_node_genes
         node_genes = sorted(node_genes, key=lambda ng: ng.node.id)
 
-        connection_genes = []
         aligned, disjoint, excess = self.align_genes(other)
 
-        for gene1, gene2 in aligned:
-            gene = gene1.copy()
-            gene.connection.weight = 0.5 * (gene1.connection.weight +
-                                            gene2.connection.weight)
-            connection_genes.append(gene)
+        connection_genes = Genome._combine_average(aligned, 'weight')
 
         connection_genes += disjoint
         connection_genes += excess
