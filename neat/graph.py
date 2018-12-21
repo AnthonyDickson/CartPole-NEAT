@@ -255,7 +255,7 @@ class Graph:
         self.nodes = {}
         self.sensors = []
         self.outputs = []
-        self.connections = defaultdict(lambda: [])
+        self.connections_dict = defaultdict(lambda: [])
 
         self.verbosity = verbosity
         self.is_compiled = False
@@ -270,8 +270,8 @@ class Graph:
         for node in self.nodes:
             copy.add_node(self.nodes[node].copy())
 
-            for connection in self.connections[node]:
-                copy.connections[node].append(connection.copy())
+            for connection in self.connections_dict[node]:
+                copy.connections_dict[node].append(connection.copy())
 
         # If a graph is copied as-is, then it should still be compiled if the
         # original was compiled, and not compiled if the other was not
@@ -320,7 +320,7 @@ class Graph:
 
         visited.add(node_id)
 
-        for input_connection in self.connections[node_id]:
+        for input_connection in self.connections_dict[node_id]:
             if input_connection.target_id in visited:
                 input_connection.is_recurrent = True
             else:
@@ -346,7 +346,7 @@ class Graph:
 
         visited.add(node_id)
 
-        for node_input in self.connections[node_id]:
+        for node_input in self.connections_dict[node_id]:
             if node_input.target_id not in visited and node_input.is_enabled \
                     and self._has_path_to_input(node_input.target_id,
                                                 visited.copy()):
@@ -386,7 +386,7 @@ class Graph:
         Arguments:
             connection: The Connection object to be added to the graph.
         """
-        self.connections[connection.origin_id].append(connection)
+        self.connections_dict[connection.origin_id].append(connection)
 
         # Adding a connection may break the graph so we force the graph to be
         # compiled again to enforce a re-run of sanity and validity checks.
@@ -399,7 +399,7 @@ class Graph:
             node_id: the id of the node that will receive the input.
             other_id: the id of the node that will provide the input.
         """
-        self.connections[node_id].append(Connection(node_id, other_id))
+        self.connections_dict[node_id].append(Connection(node_id, other_id))
 
         # Adding a connection may break the graph so we force the graph to be
         # compiled again to enforce a re-run of sanity and validity checks.
@@ -414,13 +414,26 @@ class Graph:
             node_id: the id of the node that receives the input.
             other_id: the id of the node that provides the input.
         """
-        for node_input in self.connections[node_id]:
+        for node_input in self.connections_dict[node_id]:
             if node_input.target_id == other_id:
                 node_input.is_enabled = False
 
         # Disabling a connection may break the graph so we force the graph to
         # be compiled again to enforce a re-run of sanity and validity checks.
         self.is_compiled = False
+
+    @property
+    def connections(self):
+        connections = []
+
+        for node in self.nodes:
+            connections += self.connections_dict[node]
+
+        return connections
+
+    @property
+    def recurrent_connections(self):
+        return list(filter(lambda c: c.is_recurrent, self.connections))
 
     def compute(self, x):
         """Compute the output of the neural network graph.
@@ -470,7 +483,7 @@ class Graph:
 
         node_output = node.output if node.id in self.sensors else node.bias
 
-        for input_connection in self.connections[node_id]:
+        for input_connection in self.connections_dict[node_id]:
             target = self.nodes[input_connection.target_id]
 
             if not input_connection.is_enabled:
@@ -489,7 +502,7 @@ class Graph:
     def print_connections(self):
         """Print the connections (inputs) of every node in the graph."""
         for node in self.nodes:
-            for input_connection in self.connections[node]:
+            for input_connection in self.connections_dict[node]:
                 print(input_connection)
 
     def print(self, msg, format_args=None, verbosity=Verbosity.MINIMAL):

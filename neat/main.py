@@ -71,16 +71,13 @@ class NeatAlgorithm:
         """
         sim_start = time()
 
-        step_msg_format = \
-            "\r{:03d}/{:03d} - steps: {:02d} - step time {:02.4f}s"
-
         episode_complete_msg_format = "\r{:03d}/{:03d} - " \
-                                      "mean steps: {:.2f} - " \
-                                      "median steps: {:.2f} - " \
-                                      "avg. step time: {:02.4f}s - " \
+                                      "mean fitness: {:.2f} - " \
+                                      "median fitness: {:.2f} - " \
+                                      "mean time per creature: {:02.4f}s - " \
                                       "total time: {:.4f}s"
 
-        step_history = [[] for _ in range(n_episodes)]
+        fitness_history = [[] for _ in range(n_episodes)]
 
         for episode in range(n_episodes):
             episode_start = time()
@@ -89,7 +86,6 @@ class NeatAlgorithm:
 
             for pop_i, creature in enumerate(self.population):
                 observation = self.env.reset()
-                pop_start = time()
 
                 for step in range(n_steps):
                     action = creature.get_action(observation)
@@ -97,32 +93,31 @@ class NeatAlgorithm:
 
                     if done:
                         creature.fitness = step + 1
-                        step_history[episode].append(step + 1)
 
                         break
                 else:
                     creature.fitness = n_steps
 
-                print(step_msg_format.format(pop_i + 1, self.n_pops,
-                                             step_history[episode][-1],
-                                             time() - pop_start),
+                fitness_history[episode].append(creature.fitness + 1)
+                mean_fitness = np.mean(fitness_history[episode])
+                median_fitness = np.median(fitness_history[episode])
+                episode_time = time() - episode_start
+                mean_time_per_creature = episode_time / self.n_pops
+
+                print(episode_complete_msg_format.format(pop_i + 1, self.n_pops,
+                                                         mean_fitness, median_fitness,
+                                                         mean_time_per_creature,
+                                                         episode_time),
                       end='')
-
-            mean_steps = np.mean(step_history[episode])
-            median_steps = np.median(step_history[episode])
-            total_episode_time = time() - episode_start
-            avg_step_time = total_episode_time / self.n_pops
-
-            print(episode_complete_msg_format.format(self.n_pops, self.n_pops,
-                                                     mean_steps, median_steps,
-                                                     avg_step_time,
-                                                     total_episode_time))
+            print()
 
             self.do_the_thing()
 
+            print('Total episode time: %.4fs.\n' % (time() - episode_start))
+
         print('Total run time: {:.2f}s - avg. steps: {:.2f} - best steps: {}'
-              .format(time() - sim_start, np.mean(step_history),
-                      np.max(step_history)))
+              .format(time() - sim_start, np.mean(fitness_history),
+                      np.max(fitness_history)))
         print()
 
         if not debug_mode:
@@ -134,7 +129,8 @@ class NeatAlgorithm:
               'creatures in each of them:')
 
         for species in self.species:
-            print('%s - %d creatures.' % (species, len(species)))
+            print('%s - %d creatures - %d generations old.' %
+                  (species, len(species), species.age))
 
         best_species = max(self.species, key=lambda s: s.champion.fitness)
 
@@ -144,15 +140,16 @@ class NeatAlgorithm:
         print('The overall champion was %s who had %d nodes and %d '
               'connections in its neural network.' %
               (best_species.champion,
-               len(best_species.champion.genotype.node_genes),
-               len(best_species.champion.genotype.connection_genes)))
+               len(best_species.champion.phenotype.nodes),
+               len(best_species.champion.phenotype.connections)))
 
         print()
 
-        print('Checking if %s makes the grade...' % best_species.champion)
+        print('Checking if %s makes the grade...' % best_species.champion,
+              end='')
         makes_the_grade = self.makes_the_grade(best_species.champion)
-        print(('%s makes the grade!' if makes_the_grade else
-               '%s doesn\'t make the grade :(.') % best_species.champion)
+        print(('\r%s makes the grade :)' if makes_the_grade else
+               '\r%s doesn\'t make the grade :(') % best_species.champion)
         print()
 
         print("Recording %s" % best_species.champion)
@@ -211,44 +208,56 @@ class NeatAlgorithm:
         """Do the post-episode stuff such as speciating, adjusting creature
         fitness, crossover etc.
         """
+        self.speciate()
+        self.adjust_fitness()
+        self.blame()
+        self.praise()
+        self.allot_offspring_quota()
+        self.not_so_natural_selection()
+        self.mating_season()
+        self.spring_cleaning()
+
+    def speciate(self):
+        """Place creatures in the population into a species, or create a new
+        species if no suitable species exists.
+        """
+        print('Segregating Communities...', end='')
+
         for creature in self.population:
-            self.speciate(creature)
+            for species_i in self.species:
+                if creature.distance(species_i.representative) < \
+                        Species.compatibility_threshold:
+                    species_i.add(creature)
+                    creature.species = species_i
+
+                    break
+            else:
+                new_species = Species()
+                new_species.add(creature)
+                new_species.representative = creature
+
+                self.species.add(new_species)
+                creature.species = new_species
+
+    def adjust_fitness(self):
+        """Adjust the fitness of the population."""
+        print('\r' + ' ' * 80, end='')
+        print('\rAdjusting good boy points...')
 
         for creature in self.population:
             creature.adjust_fitness()
 
-        print('Best: %s - fitness: %d (adjusted: %.2f)' %
-              (self.champ, self.champ.raw_fitness, self.champ.fitness))
-        print('Worst: %s - fitness: %d (adjusted: %.2f)' %
+    def blame(self):
+        """Blame the worst performing individual for preventing the algorithm
+        from converging, what a chump.
+        """
+        print('Blame: %s - fitness: %d (adjusted: %.2f)' %
               (self.chump, self.chump.raw_fitness, self.chump.fitness))
 
-        self.allot_offspring_quota()
-        self.not_so_natural_selection()
-        self.mating_season()
-
-        print()
-
-    def speciate(self, creature):
-        """Place a creature into a species, or create a new species if no
-        suitable species exists.
-
-        Arguments:
-            creature: the creature to place into a species.
-        """
-        for species_i in self.species:
-            if creature.distance(species_i.representative) < \
-                    Species.compatibility_threshold:
-                species_i.add(creature)
-                creature.species = species_i
-
-                break
-        else:
-            new_species = Species()
-            new_species.add(creature)
-            new_species.representative = creature
-
-            self.species.add(new_species)
-            creature.species = new_species
+    def praise(self):
+        """Praise the best individual for being the best, what a champ."""
+        print('Praise: %s - fitness: %d (adjusted: %.2f)' %
+              (self.champ, self.champ.raw_fitness, self.champ.fitness))
 
     def allot_offspring_quota(self):
         """Allot the number of offspring each species is allowed for the
@@ -257,6 +266,8 @@ class NeatAlgorithm:
         Sort of like the One-Child policy but we force each species to have
         exactly the amount of babies we tell them to. No more, no less.
         """
+        print('\r' + ' ' * 80, end='')
+        print('\rAllotting offspring Quota...', end='')
         species_mean_fitness = \
             [species.mean_fitness for species in self.species]
         sum_mean_species_fitness = sum(species_mean_fitness)
@@ -269,9 +280,11 @@ class NeatAlgorithm:
         """Perform selection on the population.
 
         Species champions (the fittest creature in a species) are carried over
-        to the next generation (elitism). The worst performing proportion of
+        to the next generation (elitism). The worst performing portion of
         each species is culled. R.I.P.
         """
+        print('\r' + ' ' * 80, end='')
+        print('\rEnforcing Survival of the Fittest...', end='')
         new_population = []
 
         for species in self.species:
@@ -285,6 +298,8 @@ class NeatAlgorithm:
 
         Replace the population with the next generation. Rip last generation.
         """
+        print('\r' + ' ' * 80, end='')
+        print('\rRearing the next generation...', end='')
         ranked_species = sorted(self.species, key=lambda s: s.champion.fitness)
         best_species = ranked_species[-1]
         the_champ = best_species.champion
@@ -306,7 +321,13 @@ class NeatAlgorithm:
         for species in self.species:
             new_population += species.next_generation(the_champ,
                                                       self.population)
+            print('.', end='')
 
+        self.population = new_population
+        print()
+
+    def spring_cleaning(self):
+        """Clean out all the cobwebs and extinct species."""
         for species in filter(lambda s: s.is_extinct, self.species):
             print('*' * 80)
             print("R.I.P. The species %s is kill after %d generations." %
@@ -314,5 +335,3 @@ class NeatAlgorithm:
             print('*' * 80)
 
         self.species = set(filter(lambda s: not s.is_extinct, self.species))
-
-        self.population = new_population

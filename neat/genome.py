@@ -504,13 +504,3 @@ class Phenotype(Graph):
             self.add_connection(connection_gene.connection)
 
         self.compile()
-
-    @property
-    def recurrent_connections(self):
-        connections = []
-
-        for node in self.nodes:
-            connections += filter(lambda c: c.is_recurrent,
-                                  self.connections[node])
-
-        return connections
