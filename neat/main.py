@@ -42,6 +42,24 @@ class NeatAlgorithm:
 
         return population
 
+    @property
+    def champ(self):
+        """The best performing creature, who is an all-round champ."""
+        self.sort_population()
+
+        return self.population[-1]
+
+    @property
+    def chump(self):
+        """The worst performing creature, who is an all-round chump."""
+        self.sort_population()
+
+        return self.population[0]
+
+    def sort_population(self):
+        self.population = sorted(self.population,
+                                 key=lambda c: c.raw_fitness + c.fitness)
+
     def train(self, n_episodes=100, n_steps=200, debug_mode=False):
         """Train species of individuals.
 
@@ -90,8 +108,6 @@ class NeatAlgorithm:
                                              time() - pop_start),
                       end='')
 
-            self.do_the_thing()
-
             mean_steps = np.mean(step_history[episode])
             median_steps = np.median(step_history[episode])
             total_episode_time = time() - episode_start
@@ -101,6 +117,8 @@ class NeatAlgorithm:
                                                      mean_steps, median_steps,
                                                      avg_step_time,
                                                      total_episode_time))
+
+            self.do_the_thing()
 
         print('Total run time: {:.2f}s - avg. steps: {:.2f} - best steps: {}'
               .format(time() - sim_start, np.mean(step_history),
@@ -119,16 +137,54 @@ class NeatAlgorithm:
             print('%s - %d creatures.' % (species, len(species)))
 
         best_species = max(self.species, key=lambda s: s.champion.fitness)
+
+        print()
         print('Out of these species, the best species was %s.' % best_species)
 
-        print('The overall champion was a creature with %d nodes and %d '
+        print('The overall champion was %s who had %d nodes and %d '
               'connections in its neural network.' %
-              (len(best_species.champion.genotype.node_genes),
+              (best_species.champion,
+               len(best_species.champion.genotype.node_genes),
                len(best_species.champion.genotype.connection_genes)))
 
+        print()
+
+        print('Checking if %s makes the grade...' % best_species.champion)
+        makes_the_grade = self.makes_the_grade(best_species.champion)
+        print(('%s makes the grade!' if makes_the_grade else
+               '%s doesn\'t make the grade :(.') % best_species.champion)
+        print()
+
+        print("Recording %s" % best_species.champion)
         self.record_video(best_species.champion)
 
         self.env.close()
+
+    def makes_the_grade(self, creature, n_trials=100, passing_grade=195.0):
+        """Check if the creature 'passes' the environment.
+
+        Returns: True if the creature passes, False otherwise.
+        """
+        avg_reward = 0
+        env = self.env
+
+        for episode in range(n_trials):
+            observation = env.reset()
+
+            episode_reward = 0
+
+            for step in range(200):
+                action = creature.get_action(observation)
+                observation, reward, done, _ = env.step(action)
+
+                episode_reward += reward
+
+                if done:
+                    break
+
+            avg_reward += episode_reward
+
+        return (avg_reward / n_trials) >= passing_grade
 
     def record_video(self, creature):
         """Record a video of the creature trying to solve the problem.
@@ -136,8 +192,6 @@ class NeatAlgorithm:
         Arguments:
             creature: the creature to record.
         """
-        print("Recording fittest creature.")
-
         env = wrappers.Monitor(self.env, './data/videos/%s' % time())
 
         for i_episode in range(20):
@@ -163,9 +217,16 @@ class NeatAlgorithm:
         for creature in self.population:
             creature.adjust_fitness()
 
+        print('Best: %s - fitness: %d (adjusted: %.2f)' %
+              (self.champ, self.champ.raw_fitness, self.champ.fitness))
+        print('Worst: %s - fitness: %d (adjusted: %.2f)' %
+              (self.chump, self.chump.raw_fitness, self.chump.fitness))
+
         self.allot_offspring_quota()
         self.not_so_natural_selection()
         self.mating_season()
+
+        print()
 
     def speciate(self, creature):
         """Place a creature into a species, or create a new species if no
@@ -225,7 +286,6 @@ class NeatAlgorithm:
         Replace the population with the next generation. Rip last generation.
         """
         ranked_species = sorted(self.species, key=lambda s: s.champion.fitness)
-        worst_species = ranked_species[0]
         best_species = ranked_species[-1]
         the_champ = best_species.champion
         new_population = []
@@ -240,7 +300,7 @@ class NeatAlgorithm:
             total_expected_offspring += pop_deficit
         elif total_expected_offspring > self.n_pops:
             pop_surplus = self.n_pops - total_expected_offspring
-            worst_species.allotted_offspring_quota -= pop_surplus
+            best_species.allotted_offspring_quota -= pop_surplus
             total_expected_offspring -= pop_surplus
 
         for species in self.species:
@@ -248,10 +308,11 @@ class NeatAlgorithm:
                                                       self.population)
 
         for species in filter(lambda s: s.is_extinct, self.species):
-            print('\n' + '*' * 80)
+            print('*' * 80)
             print("R.I.P. The species %s is kill after %d generations." %
                   (species, species.age))
-            print('*' * 80 + '\n')
+            print('*' * 80)
+
         self.species = set(filter(lambda s: not s.is_extinct, self.species))
 
         self.population = new_population

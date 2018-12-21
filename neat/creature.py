@@ -43,8 +43,10 @@ class Creature:
             n_outputs: How many outputs are expected - also how many actions
                     the creature can take.
         """
+        self.raw_fitness = 0
         self.fitness = 0
         self.species = None
+        self.name_suffix = None
 
         if n_inputs is None or n_outputs is None:
             self.genotype = None
@@ -87,9 +89,27 @@ class Creature:
         """
         copy = Creature()
         copy.genotype = self.genotype.copy()
-        copy.phenotype = self.phenotype.copy()
+        copy.phenotype = Phenotype(copy.genotype)
 
         return copy
+
+    @property
+    def name(self):
+        species = 'Unknown' if not self.species else self.species.name
+        suffix = ' %s' % self.name_suffix if self.name_suffix else ''
+
+        return species + suffix
+
+    @property
+    def scientific_name(self):
+        n_sensors = len(self.phenotype.sensors)
+        n_outputs = len(self.phenotype.outputs)
+        n_hidden = len(self.phenotype.nodes) - (n_outputs + n_sensors)
+        n_connections = len(self.phenotype.connections)
+        n_recurrent = len(self.phenotype.recurrent_connections)
+
+        return 'S%dH%dO%dC%dR%d' % (n_sensors, n_hidden, n_outputs,
+                                    n_connections, n_recurrent)
 
     def get_action(self, x):
         """Get the creature's action for the given input.
@@ -141,6 +161,7 @@ class Creature:
 
     def adjust_fitness(self):
         """Update the creature's fitness with the adjusted (shared) fitness."""
+        self.raw_fitness = self.fitness
         self.fitness = self.fitness / len(self.species)
 
     def align_genes(self, other_creature):
@@ -194,3 +215,6 @@ class Creature:
 
     def __lt__(self, other_creature):
         return self.__cmp__(other_creature) < 0
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.scientific_name)

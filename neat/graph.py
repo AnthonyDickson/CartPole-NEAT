@@ -82,7 +82,7 @@ class Node:
     def __init__(self, activation=Activations.identity):
         self.output = 0
         self.prev_output = 0
-        self.bias = random.gauss(0, 1)
+        self._bias = random.gauss(0, 1)
         self.activation = activation
 
         Node.count += 1
@@ -98,10 +98,18 @@ class Node:
         Node.count -= 1
 
         copy.id = self.id
-        copy.bias = self.bias
+        copy._bias = self._bias
         copy.activation = self.activation
 
         return copy
+
+    @property
+    def bias(self):
+        return self._bias
+
+    @bias.setter
+    def bias(self, value):
+        self._bias = value
 
     def __str__(self):
         return 'Node_%d' % self.id
@@ -116,6 +124,18 @@ class Sensor(Node):
 
     def __init__(self):
         super().__init__(Activations.identity)
+
+        self._bias = 0
+
+    @property
+    def bias(self):
+        # It doesn't make sense to have a bias on the input node.
+        return 0
+
+    @bias.setter
+    def bias(self, value):
+        # The bias on an input node should be immutable.
+        return
 
     def __str__(self):
         return 'Sensor_%d' % self.id
@@ -178,7 +198,8 @@ class Connection:
 
     def __str__(self):
         return 'Connection_{}->{}'.format(self.origin_id, self.target_id) + \
-               (' (recurrent)' if self.is_recurrent else '')
+               (' (recurrent)' if self.is_recurrent else '') + \
+               (' (disabled)' if not self.is_enabled else '')
 
     def __eq__(self, other):
         return self.origin_id == other.origin_id and \

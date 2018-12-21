@@ -151,6 +151,41 @@ class Species:
 
         return Species.name_generator.next()
 
+    @staticmethod
+    def to_ordinal(n):
+        """Get the suffixed number.
+
+        Returns: a string with then number  and the appropriate suffix.
+
+        >>> Species.to_ordinal(1)
+        '1st'
+        >>> Species.to_ordinal(2)
+        '2nd'
+        >>> Species.to_ordinal(3)
+        '3rd'
+        >>> Species.to_ordinal(4)
+        '4th'
+        >>> Species.to_ordinal(11)
+        '11th'
+        >>> Species.to_ordinal(12)
+        '12th'
+        >>> Species.to_ordinal(13)
+        '13th'
+        """
+        if 11 <= (n % 100) <= 13:
+            return '%dth' % n
+
+        last_digit = n % 10
+
+        if last_digit == 1:
+            return '%dst' % n
+        elif last_digit == 2:
+            return '%dnd' % n
+        elif last_digit == 3:
+            return '%drd' % n
+        else:
+            return '%dth' % n
+
     def __init__(self, name=''):
         """Create a new species.
 
@@ -159,12 +194,14 @@ class Species:
         """
         self.id = Species.next_id()
         self.name = name if name != '' else Species.next_name()
-        self.members = set()
+        self.members = list()
         self.representative = None
         self.allotted_offspring_quota = 0
         self.champion = None
         self.is_extinct = False
         self.age = 0  # How many generations the species has survived.
+        # Number of creatures in the species, past and present.
+        self.total_num_members = 0
 
     @property
     def mean_fitness(self):
@@ -178,7 +215,10 @@ class Species:
         Arguments:
             creature: the creature to be added to the species.
         """
-        self.members.add(creature)
+        self.members.append(creature)
+        self.total_num_members += 1
+        creature.name_suffix = 'the %s' % \
+                               Species.to_ordinal(self.total_num_members)
 
     def assign_members(self, members):
         """Assign all the members of this species.
@@ -186,8 +226,12 @@ class Species:
         Arguments:
             members: the new members of the species.
         """
-        self.members = set(members)
-        self.representative = random.choice(list(members))
+        self.members = []
+
+        for creature in sorted(members):
+            self.add(creature)
+
+        self.representative = random.choice(members)
 
     def cull_the_weak(self, how_many):
         """Cull the Weak
@@ -203,12 +247,11 @@ class Species:
 
         Returns: the survivors.
         """
-        ranked = list(sorted(self.members))
         # The champion is the last in the list because the creatures are
         # ranked in order of increasing fitness.
-        self.champion = ranked[-1]
-        num_to_kill = int(how_many * len(ranked))
-        survivor_list = list(ranked[num_to_kill:])
+        self.champion = self.members[-1]
+        num_to_kill = int(how_many * len(self.members))
+        survivor_list = list(self.members[num_to_kill:])
         self.assign_members(survivor_list)
 
         return survivor_list
@@ -226,7 +269,7 @@ class Species:
                  allotted number of offspring will be created.
         """
         offspring = []
-        pool = list(self.members)
+        pool = self.members
 
         if self.allotted_offspring_quota > 1:
             offspring.append(self.champion.copy())

@@ -3,7 +3,7 @@ creatures in NEAT.
 """
 import random
 
-from neat.graph import Graph, Connection, Hidden
+from neat.graph import Graph, Connection, Hidden, Sensor, Output
 
 
 class Gene:
@@ -156,6 +156,11 @@ class Genome:
     def all_genes(self):
         """All of the genotype's genes."""
         return list(self.node_genes) + list(self.connection_genes)
+
+    @property
+    def enabled_connection_genes(self):
+        return list(filter(lambda cg: cg.connection.is_enabled,
+                           self.connection_genes))
 
     @property
     def max_innovation_number(self):
@@ -456,16 +461,16 @@ class Genome:
 
     def _build_bridges_not_walls(self):
         """Add a new connection to the genome via mutation."""
-        node_ids = [ng.node.id for ng in self.node_genes]
-        node_ids = random.choices(node_ids, k=2)
+        nodes = [ng.node for ng in self.node_genes]
+        target_node, input_node = random.choices(nodes, k=2)
 
-        node_ids = sorted(node_ids)
+        # Sensor nodes 'reject' incoming connections.
+        # No recurrent connections from Output nodes.
+        while isinstance(target_node, Sensor) or \
+                isinstance(input_node, Output):
+            target_node, input_node = random.choices(nodes, k=2)
 
-        if random.random() < Genome.p_recurrent_connection:
-            node_ids = list(reversed(node_ids))
-
-        input_node_id, output_node_id = node_ids
-        self.add_gene(ConnectionGene(output_node_id, input_node_id))
+        self.add_gene(ConnectionGene(target_node.id, input_node.id))
 
     def __len__(self):
         """Get the length of the genome.
@@ -495,7 +500,17 @@ class Phenotype(Graph):
 
             self.add_node(node)
 
-        for connection_gene in genome.connection_genes:
+        for connection_gene in genome.enabled_connection_genes:
             self.add_connection(connection_gene.connection)
 
         self.compile()
+
+    @property
+    def recurrent_connections(self):
+        connections = []
+
+        for node in self.nodes:
+            connections += filter(lambda c: c.is_recurrent,
+                                  self.connections[node])
+
+        return connections
