@@ -4,21 +4,19 @@ import random
 import re
 
 
-class CodeNameGenerator:
+class NameGenerator:
     """Generates a random name based on adjectives and nouns used in,
-    and proposed for Ubuntu release code names.
+    similar to Ubuntu release code names.
 
-    Code names consist of an adjective and an animal name that starts
+    Names consist of an adjective and an animal name that starts
     with the same letter as the adjective (i.e. a tautogram).
-
-    Sourced from https://wiki.ubuntu.com/DevelopmentCodeNames
     """
 
     marker_pattern = re.compile(r"^\[[A-Za-z]\]$")
     key_pattern = re.compile(r"^\[([A-Za-z])\]$")
     comment_pattern = re.compile(r"^#.*")
 
-    def __init__(self, data_path='neat/data/ubuntu/',
+    def __init__(self, data_path='neat/data/',
                  adjective_file='adjectives.txt',
                  noun_file='nouns.txt'):
         """Create a name generator based on Ubuntu code names.
@@ -41,12 +39,12 @@ class CodeNameGenerator:
         filepath = data_path + adjective_file
 
         with open(filepath, 'r') as file:
-            self.adjectives = CodeNameGenerator.make_dict(file)
+            self.adjectives = NameGenerator.make_dict(file)
 
         filepath = data_path + noun_file
 
         with open(filepath, 'r') as file:
-            self.nouns = CodeNameGenerator.make_dict(file)
+            self.nouns = NameGenerator.make_dict(file)
 
     @staticmethod
     def make_dict(file):
@@ -61,13 +59,13 @@ class CodeNameGenerator:
         curr_key = ''
 
         for line in file:
-            line = CodeNameGenerator.process(line)
+            line = NameGenerator.process(line)
 
-            if re.match(CodeNameGenerator.comment_pattern, line):
+            if re.match(NameGenerator.comment_pattern, line):
                 continue
 
-            if re.match(CodeNameGenerator.marker_pattern, line):
-                result = re.search(CodeNameGenerator.key_pattern, line)
+            if re.match(NameGenerator.marker_pattern, line):
+                result = re.search(NameGenerator.key_pattern, line)
                 key = result.group(1)
                 word_dict[key] = []
                 curr_key = key
@@ -84,7 +82,7 @@ class CodeNameGenerator:
         capitalised.
         """
         line = line.strip()
-        line = CodeNameGenerator.capitalise(line)
+        line = NameGenerator.capitalise(line)
 
         return line
 
@@ -94,7 +92,7 @@ class CodeNameGenerator:
 
         Returns: the string, with all words capitalised.
         """
-        return ' '.join(map(CodeNameGenerator.capitalise_hyphened,
+        return ' '.join(map(NameGenerator.capitalise_hyphened,
                             string.split()))
 
     @staticmethod
@@ -147,7 +145,7 @@ class Species:
         Returns: a name.
         """
         if Species.name_generator is None:
-            Species.name_generator = CodeNameGenerator()
+            Species.name_generator = NameGenerator()
 
         return Species.name_generator.next()
 
@@ -319,4 +317,4 @@ class Species:
 
 
 if __name__ == '__main__':
-    print(CodeNameGenerator().next())
+    print(NameGenerator().next())

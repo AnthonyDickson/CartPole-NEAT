@@ -5,14 +5,14 @@ import random
 import re
 import unittest
 
-from neat.species import CodeNameGenerator
+from neat.species import NameGenerator
 
 
 class NameGenerationUnitTest(unittest.TestCase):
     """Test cases for the name generation code in the species module."""
 
     # Tests are designed to be run from the repo's root directory.
-    data_path = os.getcwd() + '/neat/data/ubuntu/'
+    data_path = os.getcwd() + '/neat/data/'
 
     def test_string_preprocessing(self):
         """Check if lines are correctly processed.
@@ -25,7 +25,7 @@ class NameGenerationUnitTest(unittest.TestCase):
         ]
 
         for test_string, expected in tests:
-            actual = CodeNameGenerator.process(test_string)
+            actual = NameGenerator.process(test_string)
             self.assertEqual(actual, expected,
                              'Expected %s, but got %s.' % (expected, actual))
 
@@ -35,9 +35,9 @@ class NameGenerationUnitTest(unittest.TestCase):
         Success if no errors raised and things are loaded correctly.
         """
         self.assertRaises(FileNotFoundError,
-                          lambda: CodeNameGenerator(data_path='apaththatdoesntexist'))
+                          lambda: NameGenerator(data_path='apaththatdoesntexist'))
 
-        name_gen = CodeNameGenerator(NameGenerationUnitTest.data_path)
+        name_gen = NameGenerator(NameGenerationUnitTest.data_path)
 
         self.assertGreater(len(name_gen.adjectives), 0)
         self.assertGreater(len(name_gen.nouns), 0)
@@ -47,7 +47,7 @@ class NameGenerationUnitTest(unittest.TestCase):
 
         Success if generated names a in correct format and can generate n names consecutively.
         """
-        name_gen = CodeNameGenerator(NameGenerationUnitTest.data_path)
+        name_gen = NameGenerator(NameGenerationUnitTest.data_path)
 
         word = r"[A-Z][a-zíñó]+"
         capitalised_words = re.compile(r"^({word}('s)?[\s-])+({word})$".format(word=word))
