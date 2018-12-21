@@ -175,7 +175,6 @@ class Connection:
         self.origin_id = origin_id
         self.target_id = target_id
         self.weight = random.gauss(0, 1)
-        self.is_enabled = True
         self.is_recurrent = False
 
         Connection.count += 1
@@ -191,15 +190,13 @@ class Connection:
         Connection.count -= 1
         copy.id = self.id
         copy.weight = self.weight
-        copy.is_enabled = self.is_enabled
         copy.is_recurrent = self.is_recurrent
 
         return copy
 
     def __str__(self):
         return 'Connection_{}->{}'.format(self.origin_id, self.target_id) + \
-               (' (recurrent)' if self.is_recurrent else '') + \
-               (' (disabled)' if not self.is_enabled else '')
+               (' (recurrent)' if self.is_recurrent else '')
 
     def __eq__(self, other):
         return self.origin_id == other.origin_id and \
@@ -242,7 +239,7 @@ class InvalidGraphInputError(Exception):
 
 
 class Graph:
-    """A computation graph for arbitrary neural networks that allows recurrent
+    """A computation graph for arbitrary neural networks that allow recurrent
     connections.
     """
 
@@ -347,7 +344,7 @@ class Graph:
         visited.add(node_id)
 
         for node_input in self.connections_dict[node_id]:
-            if node_input.target_id not in visited and node_input.is_enabled \
+            if node_input.target_id not in visited \
                     and self._has_path_to_input(node_input.target_id,
                                                 visited.copy()):
                 return True
@@ -403,23 +400,6 @@ class Graph:
 
         # Adding a connection may break the graph so we force the graph to be
         # compiled again to enforce a re-run of sanity and validity checks.
-        self.is_compiled = False
-
-    def disable_input(self, node_id, other_id):
-        """Disable an input of a node.
-
-        Does not remove the input connection.
-
-        Arguments:
-            node_id: the id of the node that receives the input.
-            other_id: the id of the node that provides the input.
-        """
-        for node_input in self.connections_dict[node_id]:
-            if node_input.target_id == other_id:
-                node_input.is_enabled = False
-
-        # Disabling a connection may break the graph so we force the graph to
-        # be compiled again to enforce a re-run of sanity and validity checks.
         self.is_compiled = False
 
     @property
@@ -486,9 +466,7 @@ class Graph:
         for input_connection in self.connections_dict[node_id]:
             target = self.nodes[input_connection.target_id]
 
-            if not input_connection.is_enabled:
-                continue
-            elif input_connection.is_recurrent:
+            if input_connection.is_recurrent:
                 node_output += input_connection.weight * target.prev_output
             else:
                 node_output += input_connection.weight * \

@@ -63,6 +63,8 @@ class ConnectionGene(Gene):
             origin_id: the id of the node that receives the input.
             target_id: the id of the node that provides the input.
         """
+        self.is_enabled = True
+
         if origin_id is None or target_id is None:
             self.connection = None
             self.innovation_number = None
@@ -84,13 +86,15 @@ class ConnectionGene(Gene):
         """
         copy = ConnectionGene()
         copy.connection = self.connection.copy()
+        copy.is_enabled = self.is_enabled
         copy.innovation_number = self.innovation_number
 
         return copy
 
     def __str__(self):
         return 'Connection_Gene_%d(%s)' % (self.innovation_number,
-                                           self.connection)
+                                           self.connection) + \
+               ' (disabled)' if not self.is_enabled else ''
 
     def __repr__(self):
         return self.__str__()
@@ -159,8 +163,7 @@ class Genome:
 
     @property
     def enabled_connection_genes(self):
-        return list(filter(lambda cg: cg.connection.is_enabled,
-                           self.connection_genes))
+        return list(filter(lambda cg: cg.is_enabled, self.connection_genes))
 
     @property
     def max_innovation_number(self):
@@ -237,12 +240,21 @@ class Genome:
         else:
             genotype = self._crossover_average(other)
 
-        for gene in self.connection_genes:
-            if not gene.connection.is_enabled and \
-                    random.random() < Genome.p_re_enable_connection:
-                gene.connection.is_enabled = True
+        if random.random() < Genome.p_re_enable_connection:
+            self.reenable_random_connection()
 
         return genotype
+
+    def reenable_random_connection(self):
+        """Re-enable a previously disabled connection gene."""
+        disabled_genes = list(filter(lambda cg: not cg.is_enabled,
+                                     self.connection_genes))
+
+        if len(disabled_genes) == 0:
+            return
+
+        gene = random.choice(disabled_genes)
+        gene.connection.is_enabled = True
 
     def _crossover_choose(self, other):
         """Perform crossover between two genotypes by choosing genes randomly
@@ -402,8 +414,7 @@ class Genome:
 
         if random.random() < Genome.p_add_node:
             self._give_extra_brain_cell()
-
-        if random.random() < Genome.p_add_connection:
+        elif random.random() < Genome.p_add_connection:
             self._build_bridges_not_walls()
 
     def _perturb(self):
@@ -415,7 +426,7 @@ class Genome:
                 node_gene.node.bias += random.gauss(0, Genome.perturb_range)
 
         for connection_gene in self.connection_genes:
-            if connection_gene.connection.is_enabled and \
+            if connection_gene.is_enabled and \
                     random.random() < Genome.p_perturb:
                 connection_gene.connection.weight += \
                     random.gauss(0, Genome.perturb_range)
@@ -426,7 +437,7 @@ class Genome:
         This process chooses a random enabled connection, and splits it into
         two new connections with a new node in the middle.
         """
-        enabled_connections = filter(lambda cg: cg.connection.is_enabled,
+        enabled_connections = filter(lambda cg: cg.is_enabled,
                                      self.connection_genes)
         connection_to_split = random.choice(list(enabled_connections))
         connection_to_split.connection.is_enabled = False
