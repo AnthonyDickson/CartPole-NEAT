@@ -37,10 +37,6 @@ class GraphUnitTest(unittest.TestCase):
         g.compute(x)
         g.compute(x)
 
-        g.disable_input(4, 3)
-        g.compile()
-        g.compute(x)
-
     def test_copy(self):
         g1 = Graph()
         nodes = [Sensor(), Sensor(), Sensor(), Output(), Hidden()]
