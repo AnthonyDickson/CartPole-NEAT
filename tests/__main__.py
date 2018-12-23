@@ -1,7 +1,7 @@
 import sys
 import unittest
 
-from tests import genome, graph, species, neat_main
+from tests import graph, gene, genome, species, neat_main
 
 
 # noinspection PyTypeChecker
@@ -10,6 +10,7 @@ def main():
     suite = unittest.TestSuite()
 
     suite.addTests(loader.loadTestsFromModule(graph))
+    suite.addTests(loader.loadTestsFromModule(gene))
     suite.addTests(loader.loadTestsFromModule(genome))
     suite.addTests(loader.loadTestsFromModule(species))
     suite.addTests(loader.loadTestsFromModule(neat_main))

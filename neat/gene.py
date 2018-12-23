@@ -1,12 +1,9 @@
 from neat.connection import Connection
+from neat.node import Node
 
 
 class Gene:
-    """Represents a single gene of a creature.
-
-    This stub is here simply to provide a logical hierarchy for NodeGene and
-    ConnectionGene.
-    """
+    """Represents a single gene of a creature."""
 
     @property
     def alignment_key(self):
@@ -25,6 +22,24 @@ class Gene:
             other: The other gene to combine with.
 
         Returns: a single new gene, where their 'traits' have been averaged.
+        """
+        raise NotImplementedError
+
+    def to_json(self):
+        """Encode the gene as JSON.
+
+        Returns: the JSON encoded genes.
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    def from_json(config):
+        """Load a gene object from JSON.
+
+        Arguments:
+            config: the JSON dictionary loaded from file.
+
+        Returns: a gene object.
         """
         raise NotImplementedError
 
@@ -67,6 +82,16 @@ class NodeGene(Gene):
         new_gene.bias = 0.5 * (self.bias + other.bias)
 
         return new_gene
+
+    def to_json(self):
+        return dict(node=self.node.to_json())
+
+    @staticmethod
+    def from_json(config):
+        node = Node.from_json(config['node'])
+        gene = NodeGene(node)
+
+        return gene
 
     def __str__(self):
         return 'Node_gene(%s)' % self.node
@@ -142,6 +167,22 @@ class ConnectionGene(Gene):
         new_gene.weight = 0.5 * (self.weight + other.weight)
 
         return new_gene
+
+    def to_json(self):
+        return dict(
+            connection=self.connection.to_json(),
+            innovation_number=self.innovation_number,
+            is_enabled=self.is_enabled
+        )
+
+    @staticmethod
+    def from_json(config):
+        gene = ConnectionGene()
+        gene.connection = Connection.from_json(config['connection'])
+        gene.innovation_number = config['innovation_number']
+        gene.is_enabled = config['is_enabled']
+
+        return gene
 
     def __str__(self):
         return 'Connection_Gene_%d(%s)' % (self.innovation_number,

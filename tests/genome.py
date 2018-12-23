@@ -17,6 +17,7 @@ class GenomeUnitTest(unittest.TestCase):
 
         Returns a genotype similar to one found in the origin NEAT paper.
         """
+        ConnectionGene.pool = {}
         genome = Genome()
 
         nodes = [NodeGene(Sensor()) for _ in range(3)]
