@@ -102,6 +102,11 @@ class Creature:
         return copy
 
     @property
+    def composite_fitness(self):
+        """The combination of raw fitness and adjusted fitness."""
+        return self.raw_fitness + self.fitness
+
+    @property
     def name(self):
         species = 'Unknown' if not self.species else self.species.name
         suffix = ' %s' % self.name_suffix if self.name_suffix else ''
@@ -194,9 +199,11 @@ class Creature:
                  itself is also a tuple which contains the sets of aligned
                  genes for each creature.
         """
-        is_dominant = self.fitness >= other_creature.fitness
+        dominance = self.composite_fitness - other_creature.composite_fitness
 
-        return self.genotype.align_genes(other_creature.genotype, is_dominant)
+        return Genome.align_genes(self.genotype.connection_genes,
+                                  other_creature.genotype.connection_genes,
+                                  dominance)
 
     def mate(self, other):
         """Mate, it's time to mate. Create a baby creature from two creatures.
@@ -213,7 +220,9 @@ class Creature:
         if mutate_only:
             creature.genotype = self.genotype.copy()
         else:
-            creature.genotype = self.genotype.crossover(other.genotype)
+            dominance = self.composite_fitness - other.composite_fitness
+            creature.genotype = self.genotype.crossover(other.genotype,
+                                                        dominance)
 
         if not mate_only:
             creature.mutate()
@@ -227,8 +236,7 @@ class Creature:
         self.genotype.mutate()
 
     def __lt__(self, other_creature):
-        return (self.raw_fitness + self.fitness) < \
-               (other_creature.raw_fitness + other_creature.fitness)
+        return self.composite_fitness < other_creature.composite_fitness
 
     def __str__(self):
         return '%s (%s)' % (self.name, self.scientific_name)

@@ -308,7 +308,8 @@ class NeatAlgorithm:
         """
         print('\r' + ' ' * 80, end='')
         print('\rRearing the next generation...', end='')
-        ranked_species = sorted(self.species, key=lambda s: s.champion.fitness)
+        ranked_species = sorted(self.species,
+                                key=lambda s: s.champion.composite_fitness)
         best_species = ranked_species[-1]
         the_champ = best_species.champion
         new_population = []

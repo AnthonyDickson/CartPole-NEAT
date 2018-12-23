@@ -7,7 +7,26 @@ class Gene:
     This stub is here simply to provide a logical hierarchy for NodeGene and
     ConnectionGene.
     """
-    pass
+
+    @property
+    def alignment_key(self):
+        """The key by which the gene should be aligned.
+
+        This acts as a numbering system for genes.
+        """
+        raise NotImplementedError
+
+    def combine_by_average(self, other):
+        """Combine two genes by taking the average of their distinct values.
+
+        This is typically done between two aligned genes.
+
+        Arguments:
+            other: The other gene to combine with.
+
+        Returns: a single new gene, where their 'traits' have been averaged.
+        """
+        raise NotImplementedError
 
 
 class NodeGene(Gene):
@@ -31,6 +50,10 @@ class NodeGene(Gene):
         return copy
 
     @property
+    def alignment_key(self):
+        return self.node.id
+
+    @property
     def bias(self):
         return self.node.bias
 
@@ -38,11 +61,15 @@ class NodeGene(Gene):
     def bias(self, value):
         self.node.bias = value
 
+    def combine_by_average(self, other):
+        new_gene = self.copy()
+
+        new_gene.bias = 0.5 * (self.bias + other.bias)
+
+        return new_gene
+
     def __str__(self):
         return 'Node_gene(%s)' % self.node
-
-    def __repr__(self):
-        return self.__str__()
 
     def __eq__(self, other):
         return self.node == other.node
@@ -98,6 +125,10 @@ class ConnectionGene(Gene):
         return copy
 
     @property
+    def alignment_key(self):
+        return self.innovation_number
+
+    @property
     def weight(self):
         return self.connection.weight
 
@@ -105,13 +136,17 @@ class ConnectionGene(Gene):
     def weight(self, value):
         self.connection.weight = value
 
+    def combine_by_average(self, other):
+        new_gene = self.copy()
+
+        new_gene.weight = 0.5 * (self.weight + other.weight)
+
+        return new_gene
+
     def __str__(self):
         return 'Connection_Gene_%d(%s)' % (self.innovation_number,
                                            self.connection) + \
                ' (disabled)' if not self.is_enabled else ''
-
-    def __repr__(self):
-        return self.__str__()
 
     def __eq__(self, other):
         return self.connection == other.connection and \
