@@ -4,7 +4,7 @@ creatures in NEAT.
 import random
 
 from neat.gene import NodeGene, ConnectionGene
-from neat.graph import Hidden, Sensor, Output
+from neat.node import Hidden, Sensor, Output
 
 
 class Genome:

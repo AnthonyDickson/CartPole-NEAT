@@ -1,213 +1,9 @@
 """Describes a computation graph."""
-
-import random
 from collections import defaultdict
 from enum import Enum
-from math import exp
 
-import numpy as np
-
-
-class Activations:
-    """Contains various activation functions."""
-
-    @staticmethod
-    def identity(x):
-        """The identity activation function.
-
-        Arguments:
-            x: The value to modify.
-
-        Returns: x unchanged.
-        """
-        return x
-
-    @staticmethod
-    def relu(x):
-        """The Rectified Linear Unit activation function.
-
-        Arguments:
-            x: The value to modify.
-
-        Returns: x if x > 0, 0 otherwise.
-        """
-        return max(0, x)
-
-    @staticmethod
-    def sigmoid(x):
-        """The logistic activation function.
-
-        Arguments:
-            x: The value to modify.
-
-        Returns: 1 / (1 + exp(-x)).
-        """
-        # This prevents math range errors with large negative numbers.
-        if x < 0:
-            return 1 - 1 / (1 + exp(x))
-
-        return 1 / (1 + exp(-x))
-
-    @staticmethod
-    def tanh(x):
-        """The hyperbolic tangent activation function.
-
-        Essentially a scaled and shifted logistic function.
-
-        Arguments:
-            x: The value to modify.
-
-        Returns: (exp(x) - exp(-x)) / (exp(x) + exp(-x)).
-        """
-        return (exp(x) - exp(-x)) / (exp(x) + exp(-x))
-
-    @staticmethod
-    def softmax(x):
-        """The softmax activation function..
-
-        Arguments:
-            x: The list of values to modify.
-
-        Returns: a list of numbers in the interval [0, 1) representing a
-                 probability distribution.
-        """
-        z_exp = np.exp(x)
-        return z_exp / z_exp.sum()
-
-
-class Node:
-    """A node in a neural network computation graph."""
-    count = 0  # a count of unique nodes
-
-    def __init__(self, activation=Activations.identity):
-        self.output = 0
-        self.prev_output = 0
-        self._bias = random.gauss(0, 1)
-        self.activation = activation
-
-        Node.count += 1
-        self.id = Node.count
-
-    def copy(self):
-        """Make a copy of a node.
-
-        Returns: a copy of the node.
-        """
-        copy = self.__class__()
-        # copies of nodes are not unique and therefore not counted.
-        Node.count -= 1
-
-        copy.id = self.id
-        copy._bias = self._bias
-        copy.activation = self.activation
-
-        return copy
-
-    @property
-    def bias(self):
-        return self._bias
-
-    @bias.setter
-    def bias(self, value):
-        self._bias = value
-
-    def __str__(self):
-        return 'Node_%d' % self.id
-
-    def __eq__(self, other):
-        return self.__class__ == other.__class__ and self.id == other.id
-
-
-# Create distinct node types so we can distinguish them later.
-class Sensor(Node):
-    """A sensor node (or input node) in a neural network computation graph."""
-
-    def __init__(self):
-        super().__init__(Activations.identity)
-
-        self._bias = 0
-
-    @property
-    def bias(self):
-        # It doesn't make sense to have a bias on the input node.
-        return 0
-
-    @bias.setter
-    def bias(self, value):
-        # The bias on an input node should be immutable.
-        return
-
-    def __str__(self):
-        return 'Sensor_%d' % self.id
-
-
-class Hidden(Node):
-    """A hidden node in a neural network computation graph."""
-
-    def __init__(self, activation=Activations.sigmoid):
-        super().__init__(activation)
-
-    def __str__(self):
-        return 'Hidden_%d' % self.id
-
-
-class Output(Node):
-    """An output node in a neural network computation graph."""
-
-    def __init__(self, activation=Activations.sigmoid):
-        super().__init__(activation)
-
-    def __str__(self):
-        return 'Output_%d' % self.id
-
-
-class Connection:
-    """A connection between two nodes in a neural network computation graph."""
-    count = 0  # a count of unique nodes
-
-    def __init__(self, origin_id, target_id):
-        """Create a connection between nodes.
-
-        Arguments:
-            origin_id: The id of the node that receives the input.
-            target_id: The id of the node that provides the input.
-        """
-        self.origin_id = origin_id
-        self.target_id = target_id
-        self.weight = random.gauss(0, 1)
-        self.is_recurrent = False
-
-        Connection.count += 1
-        self.id = Connection.count
-
-    def copy(self):
-        """Make a copy of a connection.
-
-        Returns: the copy of the connection.
-        """
-        copy = Connection(self.origin_id, self.target_id)
-        # copies of connections are not unique and therefore not counted.
-        Connection.count -= 1
-        copy.id = self.id
-        copy.weight = self.weight
-        copy.is_recurrent = self.is_recurrent
-
-        return copy
-
-    def __str__(self):
-        return 'Connection_{}->{}'.format(self.origin_id, self.target_id) + \
-               (' (recurrent)' if self.is_recurrent else '')
-
-    def __eq__(self, other):
-        return self.origin_id == other.origin_id and \
-               self.target_id == other.target_id
-
-    def __hash__(self):
-        hash_code = 7
-        hash_code += hash_code * self.origin_id % 17
-        hash_code += hash_code * self.target_id % 37
-
-        return hash_code
+from neat.connection import Connection
+from neat.node import Node, Sensor, Output, Activations
 
 
 class Verbosity(Enum):
@@ -497,3 +293,35 @@ class Graph:
                 print(msg % format_args)
             else:
                 print(msg)
+
+    def to_json(self):
+        """Encode a graph as JSON.
+
+        Returns: the graph encoded as JSON.
+        """
+        return dict(
+            nodes=[node.to_json() for node in self.nodes.values()],
+            connections=[connection.to_json()
+                         for connection in self.connections],
+        )
+
+    @staticmethod
+    def from_json(config):
+        """Load a graph object from JSON.
+
+        Arguments:
+            config: the JSON dictionary loaded from file.
+
+        Returns: a graph object.
+        """
+        graph = Graph()
+
+        graph.add_nodes([Node.from_json(node)
+                         for node in config['nodes']])
+        for connection in [Connection.from_json(connection)
+                           for connection in config['connections']]:
+            graph.add_connection(connection)
+
+        graph.compile()
+
+        return graph

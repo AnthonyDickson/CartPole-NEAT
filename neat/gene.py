@@ -1,4 +1,4 @@
-from neat.graph import Connection
+from neat.connection import Connection
 
 
 class Gene:

@@ -4,7 +4,7 @@ import random
 import unittest
 
 from neat.genome import Genome, NodeGene, ConnectionGene
-from neat.graph import Sensor, Output, Hidden
+from neat.node import Sensor, Output, Hidden
 from neat.phenotype import Phenotype
 
 
