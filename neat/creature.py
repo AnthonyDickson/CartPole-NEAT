@@ -130,7 +130,7 @@ class Creature:
 
     @species.setter
     def species(self, new_species):
-        if self.species:
+        if self.species and new_species is not self.species:
             self.past_species.append(self.species.name)
 
         self._species = new_species

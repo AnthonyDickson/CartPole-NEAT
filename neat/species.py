@@ -195,7 +195,6 @@ class Species:
         self.members = list()
         self.representative = None
         self.allotted_offspring_quota = 0
-        self.champion = None
         self.is_extinct = False
         self.age = 0  # How many generations the species has survived.
         # Number of creatures in the species, past and present.
@@ -206,6 +205,12 @@ class Species:
         """The mean fitness of the entire species."""
         return sum([creature.fitness for creature in self.members]) / \
                len(self.members)
+
+    @property
+    def champion(self):
+        self.members = sorted(self.members)
+
+        return self.members[-1]
 
     def add(self, creature):
         """Add a creature to the species.
@@ -227,10 +232,11 @@ class Species:
         """
         self.members = []
 
-        for creature in sorted(members):
+        for creature in sorted(set(members)):
             self.add(creature)
 
-        self.representative = random.choice(members)
+        if self.representative not in self.members:
+            self.representative = random.choice(members)
 
     def cull_the_weak(self, how_many):
         """Cull the Weak
@@ -246,9 +252,6 @@ class Species:
 
         Returns: the survivors.
         """
-        # The champion is the last in the list because the creatures are
-        # ranked in order of increasing fitness.
-        self.champion = self.members[-1]
         num_to_kill = int(how_many * len(self.members))
         survivor_list = list(self.members[num_to_kill:])
         self.assign_members(survivor_list)
@@ -270,7 +273,7 @@ class Species:
         offspring = []
         pool = self.members
 
-        if self.allotted_offspring_quota > 1:
+        if len(offspring) < self.allotted_offspring_quota:
             offspring.append(self.champion.copy())
 
         if len(offspring) < self.allotted_offspring_quota:
@@ -284,12 +287,7 @@ class Species:
             else:
                 parent2 = random.choice(pool)
 
-            # The parent who 'initiates' crossover (calls crossover) is
-            # considered the dominant parent, so matter order matters.
-            if parent1.fitness >= parent2.fitness:
-                offspring.append(parent1.mate(parent2))
-            else:
-                offspring.append(parent2.mate(parent1))
+            offspring.append(parent1.mate(parent2))
 
         if len(offspring) == 0:
             self.is_extinct = True  # R.I.P.

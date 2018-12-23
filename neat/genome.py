@@ -23,7 +23,7 @@ class Genome:
     # The below parameters are for controlling mutation.
 
     # The probability to add a node gene.
-    p_add_node = 0.012
+    p_add_node = 0.02
 
     # The probability to add a connection gene.
     p_add_connection = 0.06
@@ -239,37 +239,27 @@ class Genome:
         This process chooses a random enabled connection, and splits it into
         two new connections with a new node in the middle.
         """
-        enabled_connections = filter(lambda cg: cg.is_enabled,
-                                     self.connection_genes)
-        connection_to_split = random.choice(list(enabled_connections))
-        connection_to_split.connection.is_enabled = False
-
         new_node = NodeGene(Hidden())
-        # The new node's bias is set to zero to avoid destabilising the
-        # network.
         new_node.node.bias = 0
         new_node.node.id = len(self.node_genes)
         self.add_gene(new_node)
 
+        enabled_connections = list(filter(lambda cg: cg.is_enabled,
+                                          self.connection_genes))
+        connection_to_split = random.choice(enabled_connections)
+        connection_to_split.connection.is_enabled = False
+
         first_connection = \
             ConnectionGene(connection_to_split.connection.origin_id,
                            new_node.node.id)
-        # The first connection weight is set to zero to avoid destabilising
-        # the network.
         first_connection.connection.weight = 1.0
-        first_connection.connection.is_recurrent = \
-            connection_to_split.connection.is_recurrent
+        self.add_gene(first_connection)
+
         second_connection = \
             ConnectionGene(new_node.node.id,
                            connection_to_split.connection.target_id)
-        # The second connection's weight is set to the old connection's weight
-        # to avoid destabilising the network.
         second_connection.connection.weight = \
             connection_to_split.connection.weight
-        second_connection.connection.is_recurrent = \
-            connection_to_split.connection.is_recurrent
-
-        self.add_gene(first_connection)
         self.add_gene(second_connection)
 
     def _build_bridges_not_walls(self):

@@ -99,7 +99,7 @@ class NeatAlgorithm:
                 mean_fitness = np.mean(fitness_history[episode])
                 median_fitness = np.median(fitness_history[episode])
                 episode_time = time() - episode_start
-                mean_time_per_creature = episode_time / self.n_pops
+                mean_time_per_creature = episode_time / (pop_i + 1)
 
                 print(episode_complete_msg_format.format(pop_i + 1, self.n_pops,
                                                          mean_fitness, median_fitness,
@@ -118,32 +118,29 @@ class NeatAlgorithm:
         else:
             print('Could not solve in %d episodes :(' % n_episodes)
 
-        print('Total run time: {:.2f}s - avg. steps: {:.2f} - best steps: {}'
-              .format(time() - sim_start, np.mean(fitness_history),
-                      np.max(fitness_history)))
+        print('Total run time: {:.2f}s'.format(time() - sim_start))
         print()
 
-        if not debug_mode:
-            self.post_training_stuff()
+        self.post_training_stuff(debug_mode)
 
-    def post_training_stuff(self):
+    def post_training_stuff(self, debug_mode=False):
         """Do post training stuff."""
         print('Here are the species that made it to the end and the number of '
               'creatures in each of them:')
 
-        for species in self.species:
-            print('%s - %d creatures - %d generations old.' %
-                  (species, len(species), species.age))
+        for species in sorted(self.species, key=lambda s: s.name):
+            print('%s (%s) - %d creatures - %d generations old.' %
+                  (species, species.representative.scientific_name,
+                   len(species), species.age))
 
         best_species = max(self.species, key=lambda s: s.mean_fitness)
 
         print()
-        print('Out of these species, the best species was %s.' % best_species)
-
         oldest_creature = max(self.population, key=lambda c: c.age)
         print('The oldest creature was %s, who lived for %d generations.' %
               (oldest_creature, oldest_creature.age))
 
+        print('Out of these species, the best species was %s.' % best_species)
         print('The overall champion was %s who had %d nodes and %d '
               'connections in its neural network.' %
               (best_species.champion,
@@ -159,8 +156,9 @@ class NeatAlgorithm:
                '\r%s doesn\'t make the grade :(') % best_species.champion)
         print()
 
-        print("Recording %s" % best_species.champion)
-        self.record_video(best_species.champion)
+        if not debug_mode:
+            print("Recording %s" % best_species.champion)
+            self.record_video(best_species.champion)
 
         self.env.close()
 
@@ -337,10 +335,4 @@ class NeatAlgorithm:
 
     def spring_cleaning(self):
         """Clean out all the cobwebs and extinct species."""
-        for species in filter(lambda s: s.is_extinct, self.species):
-            print('*' * 80)
-            print("R.I.P. The species %s is kill after %d generations." %
-                  (species, species.age))
-            print('*' * 80)
-
         self.species = set(filter(lambda s: not s.is_extinct, self.species))
