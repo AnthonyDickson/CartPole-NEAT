@@ -240,3 +240,41 @@ class Creature:
 
     def __str__(self):
         return '%s (%s)' % (self.name, self.scientific_name)
+
+    def __eq__(self, other):
+        return self.distance(other) < 1e-8
+
+    def to_json(self):
+        """Encode the gene as JSON.
+
+        Returns: the JSON encoded genes.
+        """
+        return dict(
+            genotype=self.genotype.to_json(),
+            age=self.age,
+            fitness=self.fitness,
+            raw_fitness=self.raw_fitness,
+            name_suffix=self.name_suffix,
+            species=self.species.name if self.species else '',
+            past_species=self.past_species,
+        )
+
+    @staticmethod
+    def from_json(config):
+        """Load a gene object from JSON.
+
+        Arguments:
+            config: the JSON dictionary loaded from file.
+
+        Returns: a gene object.
+        """
+        creature = Creature()
+        creature.genotype = Genome.from_json(config['genotype'])
+        creature.age = config['age']
+        creature.fitness = config['fitness']
+        creature.raw_fitness = config['raw_fitness']
+        creature.name_suffix = config['name_suffix']
+        # TODO: Restore creature's species.
+        creature.past_species = config['past_species']
+
+        return creature
