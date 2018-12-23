@@ -1,5 +1,5 @@
 """Unit tests for the genome module."""
-
+import json
 import random
 import unittest
 
@@ -65,6 +65,19 @@ class GenomeUnitTest(unittest.TestCase):
 
         x = [1, 1, 1]
         self.assertEqual(phenotype1.compute(x), phenotype2.compute(x))
+
+    def test_genome_json(self):
+        """Test whether genome objects can be saved to and loaded from JSON."""
+        genome = GenomeUnitTest.generate_genome()
+
+        dump = json.dumps(genome.to_json())
+        genome_load = Genome.from_json(json.loads(dump))
+
+        self.assertEqual(len(genome), len(genome_load))
+        self.assertEqual(
+            genome.connection_genes.union(genome_load.connection_genes),
+            genome.connection_genes
+        )
 
 
 if __name__ == '__main__':

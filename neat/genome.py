@@ -275,6 +275,33 @@ class Genome:
 
         self.add_gene(ConnectionGene(target_node.id, input_node.id))
 
+    def to_json(self):
+        """Encode the genotype as JSON.
+
+        Returns: the JSON encoded genotype.
+        """
+        return dict(
+            node_genes=[ng.to_json() for ng in self.node_genes],
+            connection_genes=[cg.to_json() for cg in self.connection_genes]
+        )
+
+    @staticmethod
+    def from_json(config):
+        """Load a genome object from JSON.
+
+        Arguments:
+            config: the JSON dictionary loaded from file.
+
+        Returns: a genome object.
+        """
+        genotype = Genome()
+        genotype.add_genes([NodeGene.from_json(ng_config) for
+                            ng_config in config['node_genes']])
+        genotype.add_genes([ConnectionGene.from_json(cg_config) for
+                            cg_config in config['connection_genes']])
+
+        return genotype
+
     def __len__(self):
         """Get the length of the genome.
 
