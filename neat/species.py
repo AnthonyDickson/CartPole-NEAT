@@ -13,7 +13,7 @@ class Species:
 
     # The distance threshold used when deciding if two creatures should
     # belong in the same species or not.
-    compatibility_threshold = 3.0
+    compatibility_threshold = 4.0
 
     # The probability that a member of this species will mate with a creature
     # from another species.
@@ -49,7 +49,7 @@ class Species:
         self.id = Species.next_id()
         self.name = name if name != '' else Species.next_name()
         self.members = list()
-        self.representative = None
+        self._representative = None
         self.allotted_offspring_quota = 0
         self.is_extinct = False
         self.age = 0  # How many generations the species has survived.
@@ -67,6 +67,18 @@ class Species:
         self.members = sorted(self.members)
 
         return self.members[-1]
+
+    @property
+    def representative(self):
+        if self._representative is None or \
+                self._representative not in self.members:
+            self._representative = random.choice(self.members)
+
+        return self._representative
+
+    @representative.setter
+    def representative(self, value):
+        self._representative = value
 
     def add(self, creature):
         """Add a creature to the species.

@@ -1,4 +1,6 @@
 """Implements the NEAT algorithm."""
+import json
+import os
 from time import time
 
 import gym
@@ -18,10 +20,16 @@ class NeatAlgorithm:
 
     def __init__(self, env, n_pops=150):
         self.env = env
+        self.n_trials = env.spec.trials
+        self.reward_threshold = env.spec.reward_threshold
         self.n_pops = n_pops
         self.population = self.init_population(env.observation_space.shape[0],
                                                env.action_space.n)
         self.species = set()
+
+        self.creature_history = []
+        self.fitness_history = []
+        self.species_history = []
 
     def init_population(self, n_inputs, n_outputs):
         """Create a population of n individuals.
@@ -52,6 +60,17 @@ class NeatAlgorithm:
         return self.population[-1]
 
     @property
+    def lukewarm(self):
+        """Mr. Luke Warm, neither the worst or the best creature, he is just in
+        the middle.
+
+        Returns: the creature with the median composite fitness.
+        """
+        self.population = sorted(self.population)
+
+        return self.population[len(self.population) // 2]
+
+    @property
     def chump(self):
         """The worst performing creature, who is an all-round chump."""
         self.population = sorted(self.population)
@@ -75,21 +94,9 @@ class NeatAlgorithm:
                                       "mean time per creature: {:02.4f}s - " \
                                       "total time: {:.4f}s"
 
-        fitness_history = []
-        species_history = []
-        creature_history = []
-
         for episode in range(n_episodes):
             episode_start = time()
-            fitness_history.append([])
-            species_history.append([(species.name, len(species))
-                                    for species in self.species])
-
-            self.population = sorted(self.population, key=lambda c: c.composite_fitness)
-            worst = self.population[0].copy()
-            median = self.population[len(self.population) // 2].copy()
-            best = self.population[-1].copy()
-            creature_history.append((worst, median, best))
+            self.fitness_history.append([])
 
             print('Episode {:02d}/{:02d}'.format(episode + 1, n_episodes))
 
@@ -107,20 +114,21 @@ class NeatAlgorithm:
                 else:
                     creature.fitness = n_steps
 
-                fitness_history[episode].append(creature.fitness)
-                mean_fitness = np.mean(fitness_history[episode])
-                median_fitness = np.median(fitness_history[episode])
+                self.fitness_history[episode].append(creature.fitness)
+                mean_fitness = np.mean(self.fitness_history[episode])
+                median_fitness = np.median(self.fitness_history[episode])
                 episode_time = time() - episode_start
                 mean_time_per_creature = episode_time / (pop_i + 1)
 
-                print(episode_complete_msg_format.format(pop_i + 1, self.n_pops,
-                                                         mean_fitness, median_fitness,
-                                                         mean_time_per_creature,
-                                                         episode_time),
+                print(episode_complete_msg_format
+                      .format(pop_i + 1, self.n_pops, mean_fitness,
+                              median_fitness, mean_time_per_creature,
+                              episode_time),
                       end='')
 
-            if episode >= 100 and \
-                    np.mean(fitness_history[episode - 100:episode]) >= 195.0:
+            if episode >= self.n_trials and \
+                    np.mean(self.fitness_history[episode - self.n_trials:episode]) \
+                    >= self.reward_threshold:
                 print('\nSolved in %d episodes :)' % (episode + 1))
                 break
 
@@ -133,9 +141,9 @@ class NeatAlgorithm:
         print('Total run time: {:.2f}s'.format(time() - sim_start))
         print()
 
-        self.post_training_stuff(debug_mode)
+        self.post_training_stuff(n_steps, debug_mode)
 
-    def post_training_stuff(self, debug_mode=False):
+    def post_training_stuff(self, n_steps, debug_mode=False):
         """Do post training stuff."""
         print('Here are the species that made it to the end and the number of '
               'creatures in each of them:')
@@ -163,18 +171,20 @@ class NeatAlgorithm:
 
         print('Checking if %s makes the grade...' % best_species.champion,
               end='')
-        makes_the_grade = self.makes_the_grade(best_species.champion)
+        makes_the_grade = self.makes_the_grade(best_species.champion, n_steps)
         print(('\r%s makes the grade :)' if makes_the_grade else
                '\r%s doesn\'t make the grade :(') % best_species.champion)
         print()
 
         if not debug_mode:
             print("Recording %s" % best_species.champion)
-            self.record_video(best_species.champion)
+            self.record_video(best_species.champion, n_steps=n_steps)
+
+        self.dump()
 
         self.env.close()
 
-    def makes_the_grade(self, creature, n_trials=100, passing_grade=195.0):
+    def makes_the_grade(self, creature, n_steps):
         """Check if the creature 'passes' the environment.
 
         Returns: True if the creature passes, False otherwise.
@@ -182,12 +192,12 @@ class NeatAlgorithm:
         avg_reward = 0
         env = self.env
 
-        for episode in range(n_trials):
+        for episode in range(self.n_trials):
             observation = env.reset()
 
             episode_reward = 0
 
-            for step in range(200):
+            for step in range(n_steps):
                 action = creature.get_action(observation)
                 observation, reward, done, _ = env.step(action)
 
@@ -198,28 +208,45 @@ class NeatAlgorithm:
 
             avg_reward += episode_reward
 
-        return (avg_reward / n_trials) >= passing_grade
+        return (avg_reward / self.n_trials) >= self.reward_threshold
 
-    def record_video(self, creature):
+    def record_video(self, creature, n_episodes=20, n_steps=200):
         """Record a video of the creature trying to solve the problem.
 
         Arguments:
             creature: the creature to record.
+            n_episodes: how many episodes to record.
+            n_steps: how many steps to run each episode for.
         """
         env = wrappers.Monitor(self.env, './data/videos/%s' % time())
 
-        for i_episode in range(20):
+        for i_episode in range(n_episodes):
             observation = env.reset()
 
-            for step in range(200):
+            for step in range(n_steps):
                 env.render()
 
                 action = creature.get_action(observation)
                 observation, _, done, _ = env.step(action)
 
                 if done:
-                    print("Episode finished after {} timesteps".format(step + 1))
+                    print("Episode finished after {} timesteps"
+                          .format(step + 1))
                     break
+
+    def dump(self, path='data/training/', filename=None):
+        """Save training data to file."""
+        if path[-1] != '/':
+            path += '/'
+
+        fullpath = path + (filename if filename else '%s.json' % time())
+
+        os.makedirs(path, exist_ok=True)
+
+        with open(fullpath, 'w') as f:
+            json.dump(self.to_json(), f)
+
+        print('Saved training data to: %s.' % fullpath)
 
     def do_the_thing(self):
         """Do the post-episode stuff such as speciating, adjusting creature
@@ -227,8 +254,7 @@ class NeatAlgorithm:
         """
         self.speciate()
         self.adjust_fitness()
-        self.blame()
-        self.praise()
+        self.make_history()
         self.allot_offspring_quota()
         self.not_so_natural_selection()
         self.mating_season()
@@ -262,15 +288,19 @@ class NeatAlgorithm:
         for creature in self.population:
             creature.adjust_fitness()
 
-    def blame(self):
-        """Blame the worst performing individual for preventing the algorithm
-        from converging, what a chump.
-        """
+    def make_history(self):
+        """Time to make some history."""
+        self.species_history.append([(species.name, len(species))
+                                     for species in self.species])
+
+        self.population = sorted(self.population)
+        worst = self.chump.copy()
+        median = self.lukewarm.copy()
+        best = self.champ.copy()
+        self.creature_history.append((worst, median, best))
+
         print('Blame: %s - fitness: %d (adjusted: %.2f)' %
               (self.chump, self.chump.raw_fitness, self.chump.fitness))
-
-    def praise(self):
-        """Praise the best individual for being the best, what a champ."""
         print('Praise: %s - fitness: %d (adjusted: %.2f)' %
               (self.champ, self.champ.raw_fitness, self.champ.fitness))
 
@@ -358,16 +388,22 @@ class NeatAlgorithm:
         Returns: the generated JSON.
         """
         return dict(
-            species=[species.to_json() for species in self.species],
             env=self.env.unwrapped.spec.id,
+            species=[species.to_json() for species in self.species],
             n_pops=self.n_pops,
+            creature_history=
+            [(worst.to_json(), median.to_json(), best.to_json())
+             for (worst, median, best) in self.creature_history],
+            fitness_history=self.fitness_history,
+            species_history=self.species_history,
             settings=dict(
                 survival_threshold=NeatAlgorithm.survival_threshold,
                 compatibility_threshold=Species.compatibility_threshold,
                 p_interspecies_mating=Species.p_interspecies_mating,
                 disjointedness_importance=Creature.disjointedness_importance,
                 excessivity_importance=Creature.excessivity_importance,
-                weight_unsameness_importance=Creature.weight_unsameness_importance,
+                weight_unsameness_importance=
+                Creature.weight_unsameness_importance,
                 p_mate_only=Creature.p_mate_only,
                 p_mutate_only=Creature.p_mutate_only,
                 p_mate_average=Genome.p_mate_average,
@@ -391,7 +427,11 @@ class NeatAlgorithm:
         Returns: an instance of the NEAT algorithm.
         """
         env = gym.make(config['env'])
+
         algo = NeatAlgorithm(env)
+        algo.n_trials = env.spec.trials
+        algo.reward_threshold = env.spec.reward_threshold
+        algo.n_pops = config['n_pops']
         algo.species = set(Species.from_json(s_config)
                            for s_config in config['species'])
 
@@ -400,7 +440,13 @@ class NeatAlgorithm:
         for species in algo.species:
             algo.population += species.members
 
-        algo.n_pops = config['n_pops']
+        algo.creature_history = \
+            [(Creature.from_json(w_config), Creature.from_json(m_config),
+              Creature.from_json(b_config))
+             for (w_config, m_config, b_config) in config['creature_history']]
+        algo.fitness_history = config['fitness_history']
+        algo.species_history = config['species_history']
+
         NeatAlgorithm.set_config(config['settings'])
 
         return algo

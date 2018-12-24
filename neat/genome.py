@@ -23,7 +23,7 @@ class Genome:
     # The below parameters are for controlling mutation.
 
     # The probability to add a node gene.
-    p_add_node = 0.02
+    p_add_node = 0.06
 
     # The probability to add a connection gene.
     p_add_connection = 0.06
