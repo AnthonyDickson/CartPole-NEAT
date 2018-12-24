@@ -1,10 +1,12 @@
 """Implements the NEAT algorithm."""
 from time import time
 
+import gym
 import numpy as np
 from gym import wrappers
 
 from neat.creature import Creature
+from neat.genome import Genome
 from neat.species import Species
 
 
@@ -74,10 +76,20 @@ class NeatAlgorithm:
                                       "total time: {:.4f}s"
 
         fitness_history = []
+        species_history = []
+        creature_history = []
 
         for episode in range(n_episodes):
             episode_start = time()
             fitness_history.append([])
+            species_history.append([(species.name, len(species))
+                                    for species in self.species])
+
+            self.population = sorted(self.population, key=lambda c: c.composite_fitness)
+            worst = self.population[0].copy()
+            median = self.population[len(self.population) // 2].copy()
+            best = self.population[-1].copy()
+            creature_history.append((worst, median, best))
 
             print('Episode {:02d}/{:02d}'.format(episode + 1, n_episodes))
 
@@ -336,3 +348,83 @@ class NeatAlgorithm:
     def spring_cleaning(self):
         """Clean out all the cobwebs and extinct species."""
         self.species = set(filter(lambda s: not s.is_extinct, self.species))
+
+    def to_json(self):
+        """Encode the current state of the algorithm as JSON.
+
+        This saves pretty much everything from parameters to individual
+        creatures.
+
+        Returns: the generated JSON.
+        """
+        return dict(
+            species=[species.to_json() for species in self.species],
+            env=self.env.unwrapped.spec.id,
+            n_pops=self.n_pops,
+            settings=dict(
+                survival_threshold=NeatAlgorithm.survival_threshold,
+                compatibility_threshold=Species.compatibility_threshold,
+                p_interspecies_mating=Species.p_interspecies_mating,
+                disjointedness_importance=Creature.disjointedness_importance,
+                excessivity_importance=Creature.excessivity_importance,
+                weight_unsameness_importance=Creature.weight_unsameness_importance,
+                p_mate_only=Creature.p_mate_only,
+                p_mutate_only=Creature.p_mutate_only,
+                p_mate_average=Genome.p_mate_average,
+                p_mate_choose=Genome.p_mate_choose,
+                p_add_node=Genome.p_add_node,
+                p_add_connection=Genome.p_add_connection,
+                p_recurrent_connection=Genome.p_recurrent_connection,
+                p_re_enable_connection=Genome.p_re_enable_connection,
+                p_perturb=Genome.p_perturb,
+                perturb_range=Genome.perturb_range
+            )
+        )
+
+    @staticmethod
+    def from_json(config):
+        """Load an instance of the NEAT algorithm from JSON.
+
+        Arguments:
+            config: the JSON dictionary loaded from file.
+
+        Returns: an instance of the NEAT algorithm.
+        """
+        env = gym.make(config['env'])
+        algo = NeatAlgorithm(env)
+        algo.species = set(Species.from_json(s_config)
+                           for s_config in config['species'])
+
+        algo.population = []
+
+        for species in algo.species:
+            algo.population += species.members
+
+        algo.n_pops = config['n_pops']
+        NeatAlgorithm.set_config(config['settings'])
+
+        return algo
+
+    @staticmethod
+    def set_config(config):
+        """Set the parameters of the NEAT algorithm.
+
+        Arguments:
+            config: A dictionary containing the key-value pairs for the
+                    algorithm parameters.
+        """
+        NeatAlgorithm.survival_threshold = config['survival_threshold']
+        Species.compatibility_threshold = config['compatibility_threshold']
+        Species.p_interspecies_mating = config['p_interspecies_mating']
+        Creature.disjointedness_importance = config['disjointedness_importance']
+        Creature.excessivity_importance = config['excessivity_importance']
+        Creature.p_mate_only = config['p_mate_only']
+        Creature.p_mutate_only = config['p_mutate_only']
+        Genome.p_mate_average = config['p_mate_average']
+        Genome.p_mate_choose = config['p_mate_choose']
+        Genome.p_add_node = config['p_add_node']
+        Genome.p_add_connection = config['p_add_connection']
+        Genome.p_recurrent_connection = config['p_recurrent_connection']
+        Genome.p_re_enable_connection = config['p_re_enable_connection']
+        Genome.p_perturb = config['p_perturb']
+        Genome.perturb_range = config['perturb_range']

@@ -280,4 +280,6 @@ class Creature:
         # TODO: Restore creature's species.
         creature.past_species = config['past_species']
 
+        creature.phenotype = Phenotype(creature.genotype)
+
         return creature
