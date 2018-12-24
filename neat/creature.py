@@ -242,6 +242,9 @@ class Creature:
         return '%s (%s)' % (self.name, self.scientific_name)
 
     def __eq__(self, other):
+        if not other:
+            return False
+
         return self.distance(other) < 1e-8
 
     def to_json(self):

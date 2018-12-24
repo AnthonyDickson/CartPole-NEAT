@@ -1,118 +1,9 @@
 """Implements stuff related to species."""
 
 import random
-import re
 
-
-class NameGenerator:
-    """Generates a random name based on adjectives and nouns used in,
-    similar to Ubuntu release code names.
-
-    Names consist of an adjective and an animal name that starts
-    with the same letter as the adjective (i.e. a tautogram).
-    """
-
-    marker_pattern = re.compile(r"^\[[A-Za-z]\]$")
-    key_pattern = re.compile(r"^\[([A-Za-z])\]$")
-    comment_pattern = re.compile(r"^#.*")
-
-    def __init__(self, data_path='neat/data/',
-                 adjective_file='adjectives.txt',
-                 noun_file='nouns.txt'):
-        """Create a name generator based on Ubuntu code names.
-
-        Data files should have the following format:
-            - Comments start the line with a # symbol.
-            - Words should be grouped by the first letter of the word.
-            - A marker should be placed at the top of  each group of words,
-                and it should contain the corresponding letter capitalised and
-                surrounded in brackets. For example, all adjectives starting
-                with 'A' or 'a' should be grouped together and come after the
-                marker '[A]'.
-
-        Arguments:
-            data_path: where the data files containing the adjective and animal
-                       names are located.
-            adjective_file: the name of the file that contains the adjectives.
-            noun_file: the name of the file that contains the animal names.
-        """
-        filepath = data_path + adjective_file
-
-        with open(filepath, 'r') as file:
-            self.adjectives = NameGenerator.make_dict(file)
-
-        filepath = data_path + noun_file
-
-        with open(filepath, 'r') as file:
-            self.nouns = NameGenerator.make_dict(file)
-
-    @staticmethod
-    def make_dict(file):
-        """Read a data file and generate a dictionary from it.
-
-        Arguments:
-            file: the opened file that contains the data.
-
-        Returns: a dictionary of words, indexed by starting letter.
-        """
-        word_dict = {}
-        curr_key = ''
-
-        for line in file:
-            line = NameGenerator.process(line)
-
-            if re.match(NameGenerator.comment_pattern, line):
-                continue
-
-            if re.match(NameGenerator.marker_pattern, line):
-                result = re.search(NameGenerator.key_pattern, line)
-                key = result.group(1)
-                word_dict[key] = []
-                curr_key = key
-            else:
-                word_dict[curr_key].append(line)
-
-        return word_dict
-
-    @staticmethod
-    def process(line):
-        """Process a line and make it ready for use.
-
-        Returns: the line, stripped of trailing whitespace and all words
-        capitalised.
-        """
-        line = line.strip()
-        line = NameGenerator.capitalise(line)
-
-        return line
-
-    @staticmethod
-    def capitalise(string):
-        """Capitalise the words in the string.
-
-        Returns: the string, with all words capitalised.
-        """
-        return ' '.join(map(NameGenerator.capitalise_hyphened,
-                            string.split()))
-
-    @staticmethod
-    def capitalise_hyphened(string):
-        """Capitalise the string, including words separated by hyphens.
-
-        Returns: the string, with all words capitalised.
-        """
-        return '-'.join(map(str.capitalize, string.split('-')))
-
-    def next(self):
-        """Gets the next name.
-
-        Returns: the next name.
-        """
-        key = random.choice(list(self.adjectives.keys()))
-        adjective = random.choice(self.adjectives[key])
-        noun = random.choice(self.nouns[key])
-
-        return ' '.join([adjective, noun])
+from neat.creature import Creature
+from neat.name_generation import to_ordinal, NameGenerator
 
 
 class Species:
@@ -148,41 +39,6 @@ class Species:
             Species.name_generator = NameGenerator()
 
         return Species.name_generator.next()
-
-    @staticmethod
-    def to_ordinal(n):
-        """Get the suffixed number.
-
-        Returns: a string with then number  and the appropriate suffix.
-
-        >>> Species.to_ordinal(1)
-        '1st'
-        >>> Species.to_ordinal(2)
-        '2nd'
-        >>> Species.to_ordinal(3)
-        '3rd'
-        >>> Species.to_ordinal(4)
-        '4th'
-        >>> Species.to_ordinal(11)
-        '11th'
-        >>> Species.to_ordinal(12)
-        '12th'
-        >>> Species.to_ordinal(13)
-        '13th'
-        """
-        if 11 <= (n % 100) <= 13:
-            return '%dth' % n
-
-        last_digit = n % 10
-
-        if last_digit == 1:
-            return '%dst' % n
-        elif last_digit == 2:
-            return '%dnd' % n
-        elif last_digit == 3:
-            return '%drd' % n
-        else:
-            return '%dth' % n
 
     def __init__(self, name=''):
         """Create a new species.
@@ -220,8 +76,7 @@ class Species:
         """
         self.members.append(creature)
         self.total_num_members += 1
-        creature.name_suffix = 'the %s' % \
-                               Species.to_ordinal(self.total_num_members)
+        creature.name_suffix = 'the %s' % to_ordinal(self.total_num_members)
         creature.species = self
 
     def assign_members(self, members):
@@ -232,7 +87,7 @@ class Species:
         """
         self.members = []
 
-        for creature in sorted(set(members)):
+        for creature in sorted(members):
             self.add(creature)
 
         if self.representative not in self.members:
@@ -297,6 +152,44 @@ class Species:
 
         return offspring
 
+    def to_json(self):
+        """Encode the gene as JSON.
+
+        Returns: the JSON encoded genes.
+        """
+        return dict(
+            age=self.age,
+            id=self.id,
+            members=[c.to_json() for c in self.members],
+            name=self.name,
+            representative=self.members.index(self.representative),
+            allotted_offspring_quota=self.allotted_offspring_quota
+        )
+
+    @staticmethod
+    def from_json(config):
+        """Load a gene object from JSON.
+
+        Arguments:
+            config: the JSON dictionary loaded from file.
+
+        Returns: a gene object.
+        """
+        species = Species()
+
+        species.name = config['name']
+        species.age = config['age']
+        species.id = config['id']
+        species.members = [Creature.from_json(c_config)
+                           for c_config in config['members']]
+        species.representative = species.members[config['representative']]
+        species.allotted_offspring_quota = config['allotted_offspring_quota']
+
+        for creature in species.members:
+            creature.species = species
+
+        return species
+
     def __str__(self):
         return '%s' % self.name
 
@@ -313,6 +206,3 @@ class Species:
         """
         return len(self.members)
 
-
-if __name__ == '__main__':
-    print(NameGenerator().next())

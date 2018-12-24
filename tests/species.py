@@ -1,64 +1,29 @@
-"""Unit tests for the species module."""
-
-import os
+"""Unit tests for the name generation module."""
+import json
 import random
-import re
 import unittest
 
-from neat.species import NameGenerator
+from neat.creature import Creature
+from neat.species import Species
 
 
-class NameGenerationUnitTest(unittest.TestCase):
-    """Test cases for the name generation code in the species module."""
+class SpeciesUnitTest(unittest.TestCase):
+    def test_json(self):
+        """Test whether a species can be saved to and loaded from JSON."""
+        species = Species()
+        species.assign_members([Creature(4, 1) for _ in range(100)])
+        species.allotted_offspring_quota = 93
 
-    # Tests are designed to be run from the repo's root directory.
-    data_path = os.getcwd() + '/neat/data/'
+        dump = json.dumps(species.to_json())
+        species_load = Species.from_json(json.loads(dump))
 
-    def test_string_preprocessing(self):
-        """Check if lines are correctly processed.
-
-        Success if all trailing white space is removed, and all words are capitalised.
-        """
-        tests = [
-            (' aa aa \n', 'Aa Aa'),
-            ('oompa-loompa', 'Oompa-Loompa')
-        ]
-
-        for test_string, expected in tests:
-            actual = NameGenerator.process(test_string)
-            self.assertEqual(actual, expected,
-                             'Expected %s, but got %s.' % (expected, actual))
-
-    def test_loads_from_file(self):
-        """Attempt to intialise a CodeNameGenerator name generator.
-
-        Success if no errors raised and things are loaded correctly.
-        """
-        self.assertRaises(FileNotFoundError,
-                          lambda: NameGenerator(data_path='apaththatdoesntexist'))
-
-        name_gen = NameGenerator(NameGenerationUnitTest.data_path)
-
-        self.assertGreater(len(name_gen.adjectives), 0)
-        self.assertGreater(len(name_gen.nouns), 0)
-
-    def test_generates_names(self):
-        """Briefly test name generation.
-
-        Success if generated names a in correct format and can generate n names consecutively.
-        """
-        name_gen = NameGenerator(NameGenerationUnitTest.data_path)
-
-        word = r"[A-Z][a-zíñó]+"
-        capitalised_words = re.compile(r"^({word}('s)?[\s-])+({word})$".format(word=word))
-
-        for _ in range(10000):
-            name = name_gen.next()
-
-            self.assertGreater(len(name), 0)
-            self.assertFalse(re.match(capitalised_words, name) is None,
-                             'Expected capitalised words, got '
-                             '\'%s\'' % name)
+        self.assertEqual(len(species), len(species_load))
+        self.assertEqual(species.representative, species_load.representative)
+        self.assertEqual(species.name, species_load.name)
+        self.assertEqual(species.id, species_load.id)
+        self.assertEqual(species.allotted_offspring_quota,
+                         species_load.allotted_offspring_quota)
+        self.assertEqual(species.champion, species_load.champion)
 
 
 if __name__ == '__main__':
