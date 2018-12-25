@@ -9,6 +9,7 @@ from gym import wrappers
 
 from neat.creature import Creature
 from neat.genome import Genome
+from neat.pso import PSO
 from neat.species import Species
 
 
@@ -77,12 +78,14 @@ class NeatAlgorithm:
 
         return self.population[0]
 
-    def train(self, n_episodes=100, n_steps=200, debug_mode=False):
+    def train(self, n_episodes=100, n_steps=200, n_pso_episodes=5,
+              debug_mode=False):
         """Train species of individuals.
 
         Arguments:
             n_episodes: The number of episodes to trian for.
             n_steps: The maximum number of steps per individual per episode.
+            n_pso_episodes: The number of episodes
             debug_mode: If set to True, some features that aren't intended for
                         testing environments and such are disabled.
         """
@@ -95,11 +98,18 @@ class NeatAlgorithm:
                                       "total time: {:.4f}s"
 
         for episode in range(n_episodes):
+            print('Episode {:02d}/{:02d}'.format(episode + 1, n_episodes))
+
             episode_start = time()
             self.fitness_history.append([])
 
-            print('Episode {:02d}/{:02d}'.format(episode + 1, n_episodes))
+            print('Acquiring Collective intelligence...')
+            for species in self.species:
+                pso = PSO(self.env, species.members)
+                pso.train(n_episodes=n_pso_episodes, n_steps=n_steps)
+                pso.apply()
 
+            print('\nEvaluating Population Goodness...')
             for pop_i, creature in enumerate(self.population):
                 observation = self.env.reset()
 

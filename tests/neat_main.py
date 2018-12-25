@@ -28,7 +28,7 @@ class NeatAlgorithmUnitTest(unittest.TestCase):
             env = gym.make('CartPole-v0')
             neat = NeatAlgorithm(env)
 
-            neat.train(n_episodes=10, debug_mode=True)
+            neat.train(n_episodes=5, debug_mode=True)
         except Exception as error:
             raise error
         finally:

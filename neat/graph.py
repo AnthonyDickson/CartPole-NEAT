@@ -294,6 +294,9 @@ class Graph:
             else:
                 print(msg)
 
+    def __len__(self):
+        return len(self.nodes) + len(self.connections)
+
     def to_json(self):
         """Encode a graph as JSON.
 
