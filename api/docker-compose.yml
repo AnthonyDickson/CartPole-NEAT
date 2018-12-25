@@ -1,24 +1,37 @@
 version: '3'
 services:
   postgres:
-    restart: always
     image: postgres:10-alpine
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - ./postgres-data/postgres:/var/lib/postgresql/data
-    ports:
-      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
-  flask:
     restart: always
-    build: .
-    environment: 
-      - SQLALCHEMY_DATABASE_URI=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}
-    ports:
-      - ${FLASK_PORT}:${FLASK_PORT}
-    volumes:
-      - ./src:/app
+  pgadmin:
+    image: dpage/pgadmin4
     depends_on:
       - postgres
+    ports:
+      - "${PG_ADMIN_PORT}:${PG_ADMIN_PORT}"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PG_ADMIN_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PG_ADMIN_PASSWORD}
+      - PGADMIN_LISTEN_PORT=${PG_ADMIN_PORT}
+    volumes:
+      - ./postgres-data/pg-admin:/var/lib/pgadmin
+    restart: always
+  flask:
+    build: .
+    depends_on:
+      - postgres
+    ports:
+      - ${FLASK_PORT}:${FLASK_PORT}
+    environment:
+      - SQLALCHEMY_DATABASE_URI=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}
+    volumes:
+      - ./src:/app
+    restart: always

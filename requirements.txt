@@ -1,5 +1,7 @@
 codecov
 codacy-coverage
 flask
+flask_restful
+flask_sqlalchemy
 gym
 yappi

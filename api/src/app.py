@@ -18,7 +18,7 @@ class HelloWorld(Resource):
 
 
 # noinspection PyTypeChecker
-api.add_resource(HelloWorld, '/')
+api.add_resource(HelloWorld, '/api')
 
 
 class UserAPI(Resource):
@@ -36,7 +36,7 @@ class UserAPI(Resource):
 
 
 # noinspection PyTypeChecker
-api.add_resource(UserAPI, '/users', '/users/<id>')
+api.add_resource(UserAPI, '/api/users', '/api/users/<id>')
 
 
 class User(db.Model):
