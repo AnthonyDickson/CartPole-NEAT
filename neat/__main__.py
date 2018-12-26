@@ -8,7 +8,7 @@ from neat.main import NeatAlgorithm
 
 def main(debug_mode=False):
     n_episodes = 100
-    n_pso_episodes = 5
+    n_pso_episodes = 0  # Algorithm seems to converge faster w/o PSO.
     n_steps = 200
     n_pops = 150
 

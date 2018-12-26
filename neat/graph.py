@@ -48,6 +48,7 @@ class Graph:
         self.nodes = {}
         self.sensors = []
         self.outputs = []
+        self.connections = []
         self.connections_dict = defaultdict(lambda: [])
 
         self.verbosity = verbosity
@@ -94,6 +95,9 @@ class Graph:
         if not has_path_to_input:
             raise InvalidGraphError('Graph needs at least one sensor (input) '
                                     'to be connected to an output.')
+
+        for node in self.nodes:
+            self.connections += self.connections_dict[node]
 
         self.is_compiled = True
 
@@ -197,15 +201,6 @@ class Graph:
         # Adding a connection may break the graph so we force the graph to be
         # compiled again to enforce a re-run of sanity and validity checks.
         self.is_compiled = False
-
-    @property
-    def connections(self):
-        connections = []
-
-        for node in self.nodes:
-            connections += self.connections_dict[node]
-
-        return connections
 
     @property
     def recurrent_connections(self):

@@ -103,13 +103,16 @@ class NeatAlgorithm:
             episode_start = time()
             self.fitness_history.append([])
 
-            print('Acquiring Collective intelligence...')
-            for species in self.species:
-                pso = PSO(self.env, species.members)
-                pso.train(n_episodes=n_pso_episodes, n_steps=n_steps)
-                pso.apply()
+            if n_pso_episodes > 0:
+                print('Acquiring Collective Intelligence...')
+                for species in self.species:
+                    pso = PSO(self.env, species.members)
+                    pso.train(n_episodes=n_pso_episodes, n_steps=n_steps)
+                    pso.apply()
+                print('\nCollective Intelligence acquired in {:.4f}s.'
+                      .format(time() - episode_start))
 
-            print('\nEvaluating Population Goodness...')
+            print('Evaluating Population Goodness...')
             for pop_i, creature in enumerate(self.population):
                 observation = self.env.reset()
 
