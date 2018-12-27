@@ -1,4 +1,9 @@
-psycopg2
 flask
-flask-restful
+flask_marshmallow
+flask_migrate
+flask_restful
+flask_script
 flask_sqlalchemy
+marshmallow
+marshmallow-sqlalchemy
+psycopg2

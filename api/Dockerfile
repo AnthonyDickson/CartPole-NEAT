@@ -7,7 +7,7 @@ RUN apk update \
     && apk add --no-cache --virtual .build-deps postgresql-dev gcc musl-dev \
     && pip install --no-cache-dir -r /requirements.txt \
     && apk del --no-cache .build-deps
-COPY src/ /app
+COPY . /app
 WORKDIR /app
 
-CMD ["python", "app.py"]
+ENTRYPOINT ["sh", "entrypoint.sh"]
