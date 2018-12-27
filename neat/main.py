@@ -33,9 +33,9 @@ class NeatAlgorithm:
         self.fitness_history = []
         self.species_history = []
 
-        run_id_hash = hashlib.sha1()[:16]
+        run_id_hash = hashlib.sha1()
         run_id_hash.update(str(time()).encode('utf-8'))
-        self.run_id = run_id_hash.hexdigest()
+        self.run_id = run_id_hash.hexdigest()[:16]
 
     def init_population(self, n_inputs, n_outputs):
         """Create a population of n individuals.
