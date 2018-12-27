@@ -1,4 +1,5 @@
 """Implements the NEAT algorithm."""
+import hashlib
 import json
 import os
 from time import time
@@ -31,6 +32,10 @@ class NeatAlgorithm:
         self.creature_history = []
         self.fitness_history = []
         self.species_history = []
+
+        run_id_hash = hashlib.sha1()
+        run_id_hash.update(str(time()).encode('utf-8'))
+        self.run_id = run_id_hash.hexdigest()
 
     def init_population(self, n_inputs, n_outputs):
         """Create a population of n individuals.
@@ -401,6 +406,7 @@ class NeatAlgorithm:
         Returns: the generated JSON.
         """
         return dict(
+            run_id=self.run_id,
             env=self.env.unwrapped.spec.id,
             species=[species.to_json() for species in self.species],
             n_pops=self.n_pops,
@@ -442,6 +448,7 @@ class NeatAlgorithm:
         env = gym.make(config['env'])
 
         algo = NeatAlgorithm(env)
+        algo.run_id = config['run_id']
         algo.n_trials = env.spec.trials
         algo.reward_threshold = env.spec.reward_threshold
         algo.n_pops = config['n_pops']

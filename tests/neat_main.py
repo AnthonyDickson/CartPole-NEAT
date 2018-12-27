@@ -55,6 +55,7 @@ class NeatAlgorithmUnitTest(unittest.TestCase):
             dump = json.dumps(neat.to_json())
             neat_load = NeatAlgorithm.from_json(json.loads(dump))
 
+            self.assertEqual(neat.run_id, neat_load.run_id)
             self.assertEqual(len(neat.population), len(neat_load.population))
             self.assertEqual(len(neat.species), len(neat_load.species))
             self.assertEqual(neat.env.unwrapped.spec.id,
