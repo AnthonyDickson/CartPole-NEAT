@@ -6,9 +6,9 @@ _Note:_ This is assumes you have a similar ```.env``` to the [sample ```.env```]
 
 1.	 Make sure you have [Docker](https://docs.docker.com/install/) and [Docker Compose](https://docs.docker.com/compose/install/) installed.
 
-2.	Open your terminal at 'api/' or change it to 'api/' from the repository root directory:
+2.	Open your terminal at 'web/' or change it to 'web/' from the repository root directory:
     ```shell
-    $ cd api/
+    $ cd web/
     ```
     
 3.	Setup the .env file. See the following [section](#configuring-environment-settings) on configuring environment settings.
@@ -53,9 +53,9 @@ _Note:_ This is assumes you have a similar ```.env``` to the [sample ```.env```]
     
 ## Configuring Environment Settings
 The flask server and PostgreSQL database require some environment variables to be set. These can be passed to Docker Compose via a .env file. To ensure that everything is setup correctly follow these steps:
-1.	Create the file ```.env``` in the ```api/``` directory.
+1.	Create the file ```.env``` in the ```web/``` directory.
     ```shell
-    $ cd api/
+    $ cd web/
     $ touch .env
     ```
     

@@ -7,7 +7,10 @@ RUN apk update \
     && apk add --no-cache --virtual .build-deps postgresql-dev gcc musl-dev \
     && pip install --no-cache-dir -r /requirements.txt \
     && apk del --no-cache .build-deps
-COPY . /app
-WORKDIR /app
+
+EXPOSE 5000
+
+COPY api/ /api
+COPY entrypoint.sh /
 
 ENTRYPOINT ["sh", "entrypoint.sh"]

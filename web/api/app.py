@@ -1,8 +1,8 @@
 from flask import Blueprint
 from flask_restful import Api
 
-from resources.hello import Hello
-from resources.runs import Run, Runs, RunFinished
+from api.resources.hello import Hello
+from api.resources.runs import Run, Runs, RunFinished
 
 api_bp = Blueprint('api', __name__)
 api = Api(api_bp)

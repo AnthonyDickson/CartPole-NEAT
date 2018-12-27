@@ -1,8 +1,8 @@
 from flask import request
 from flask_restful import Resource
 
-from model import Run as RunModel
-from model import db, RunSchema
+from api.model import Run as RunModel
+from api.model import db, RunSchema
 
 runs_schema = RunSchema(many=True)
 run_schema = RunSchema()

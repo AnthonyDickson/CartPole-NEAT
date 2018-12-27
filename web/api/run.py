@@ -1,7 +1,7 @@
 from flask import Flask
 
-from app import api_bp
-from model import db
+from api.app import api_bp
+from api.model import db
 
 
 def create_app(config_filename):
@@ -16,5 +16,5 @@ def create_app(config_filename):
 
 
 if __name__ == "__main__":
-    app = create_app("config")
+    app = create_app("api.config")
     app.run(host='0.0.0.0', debug=True)
