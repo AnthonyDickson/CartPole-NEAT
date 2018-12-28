@@ -8,7 +8,7 @@ db = SQLAlchemy()
 
 # noinspection PyTypeChecker
 class Run(db.Model):
-    id = db.Column(db.String(16), primary_key=True)
+    id = db.Column(db.CHAR(16), primary_key=True)
     start_date = db.Column(db.TIMESTAMP, server_default=db.func.current_timestamp(), nullable=False)
     end_date = db.Column(db.TIMESTAMP)
 

@@ -7,7 +7,7 @@ from api.resources.runs import Run, Runs, RunFinished
 api_bp = Blueprint('api', __name__)
 api = Api(api_bp)
 
-api.add_resource(Hello, '/hello', '/hello/<name>')
+api.add_resource(Hello, '/', '/hello', '/hello/<name>')
 api.add_resource(Runs, '/runs')
 api.add_resource(Run, '/runs/<id>')
 api.add_resource(RunFinished, '/runs/<id>/finished')
