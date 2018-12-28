@@ -36,3 +36,12 @@ services:
       - ./api/:/api
       - ../data/migrations:/migrations
     restart: always
+  react:
+    build: frontend
+    environment:
+      - NODE_ENV=production
+      - PORT=${REACT_PORT}
+    ports:
+      - ${REACT_PORT}:${REACT_PORT}
+    volumes:
+      - ./frontend:/app
