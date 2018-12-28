@@ -4,6 +4,7 @@ import Moment from 'react-moment';
 import 'moment-timezone';
 
 const API = "http://localhost:5000/api";
+const TIMESTAMP_FORMAT = "YYYY-MM-DD hh:mm A";
 
 class RunList extends Component {
     render() {
@@ -11,22 +12,31 @@ class RunList extends Component {
             return <div>No data.</div>
         }
 
-        const end_date = (this.props.data.end_date == null) ?
-            <span>-</span> :
-            <Moment date={this.props.data.end_date} format="YYYY-MM-DD hh:mm A"/>;
+        return <ListGroup>
+            {
+                this.props.data.map((item, i) =>
+                    <ListGroupItem key={i}>
+                        <RunListItem item={item}/>
+                    </ListGroupItem>
+                )
+            }
+        </ListGroup>;
+    }
+}
+
+class RunListItem extends Component {
+    render() {
+        const start_date = <Moment date={this.props.item.start_date} format={TIMESTAMP_FORMAT}/>;
+        const end_date = (this.props.item.end_date === null) ? <span>-</span> :
+            <Moment date={this.props.item.end_date} format={TIMESTAMP_FORMAT}/>;
 
         return (
-            <ListGroup>
-                {
-                    this.props.data.map((item, i) => {
-                        return <ListGroupItem key={i}>
-                            <span>{item.id} </span>
-                            <Moment date={item.start_date} format="YYYY-MM-DD hh:mm A "/>
-                            {end_date}
-                        </ListGroupItem>
-                    })
-                }
-            </ListGroup>
+            <ul className="list-inline">
+                <li className="list-inline-item">{this.props.item.id}</li>
+                <li className="list-inline-item">{start_date}</li>
+                <li className="list-inline-item">{end_date}
+                </li>
+            </ul>
         );
     }
 }
