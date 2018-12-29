@@ -41,7 +41,7 @@ class Connection:
         Returns: the connection encoded as JSON.
         """
         return dict(
-            origin_id=self.target_id,
+            target_id=self.target_id,
             input_id=self.input_id,
             id=self.id,
             object_id=self.object_id,

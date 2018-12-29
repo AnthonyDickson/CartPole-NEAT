@@ -57,7 +57,7 @@ class NeatAlgorithmUnitTest(unittest.TestCase):
 
             self.assertEqual(neat.run_id, neat_load.run_id)
             self.assertEqual(len(neat.population), len(neat_load.population))
-            self.assertEqual(len(neat.species), len(neat_load.species))
+            self.assertEqual(len(neat.population.species), len(neat_load.population.species))
             self.assertEqual(neat.env.unwrapped.spec.id,
                              neat_load.env.unwrapped.spec.id)
 

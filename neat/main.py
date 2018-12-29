@@ -11,6 +11,7 @@ from gym import wrappers
 
 from neat.creature import Creature
 from neat.genome import Genome
+from neat.population import Population
 from neat.pso import PSO
 from neat.species import Species
 
@@ -18,23 +19,17 @@ from neat.species import Species
 class NeatAlgorithm:
     """An implementation of the NEAT algorithm based off the original paper."""
 
-    # Percentage of each species that is allowed to reproduce.
-    survival_threshold = 0.3
-
     api_url = 'http://localhost:5000/api'
 
     def __init__(self, env, n_pops=150):
         self.env = env
         self.n_trials = env.spec.trials
         self.reward_threshold = env.spec.reward_threshold
-        self.n_pops = n_pops
-        self.population = self.init_population(env.observation_space.shape[0],
-                                               env.action_space.n)
-        self.species = set()
+        genesis = Creature(env.observation_space.shape[0], env.action_space.n)
+        self.population = Population(genesis, n_pops)
 
-        self.creature_history = []
         self.fitness_history = []
-        self.species_history = []
+        self.snapshots = []
 
         run_id_hash = hashlib.sha1()
         run_id_hash.update(str(time()).encode('utf-8'))
@@ -45,52 +40,6 @@ class NeatAlgorithm:
         if r.status_code != 201:
             print('WARNING: Could not add run data to database.')
             print(r.json())
-
-    def init_population(self, n_inputs, n_outputs):
-        """Create a population of n individuals.
-
-        Each individual is initially has a fully connected neural network with
-        n_inputs neurons in the input layer and n_outputs neurons in the
-        output layer.
-
-        Arguments:
-            n_inputs: How many inputs to expect. An observation in CartPole
-                      has four dimensions, so in this case n_inputs would be
-                      four.
-            n_outputs: How many outputs to expect. CartPole has two actions in
-                      its action space, so in this case n_inputs would be two.
-
-        Returns: the initialised population that is ready for use.
-        """
-        creature = Creature(n_inputs, n_outputs)
-        population = [creature.copy() for _ in range(self.n_pops)]
-
-        return population
-
-    @property
-    def champ(self):
-        """The best performing creature, who is an all-round champ."""
-        self.population = sorted(self.population)
-
-        return self.population[-1]
-
-    @property
-    def lukewarm(self):
-        """Mr. Luke Warm, neither the worst or the best creature, he is just in
-        the middle.
-
-        Returns: the creature with the median composite fitness.
-        """
-        self.population = sorted(self.population)
-
-        return self.population[len(self.population) // 2]
-
-    @property
-    def chump(self):
-        """The worst performing creature, who is an all-round chump."""
-        self.population = sorted(self.population)
-
-        return self.population[0]
 
     def train(self, n_episodes=100, n_steps=200, n_pso_episodes=5,
               debug_mode=False):
@@ -119,7 +68,7 @@ class NeatAlgorithm:
 
             if n_pso_episodes > 0:
                 print('Acquiring Collective Intelligence...')
-                for species in self.species:
+                for species in self.population.species:
                     pso = PSO(self.env, species.members)
                     pso.train(n_episodes=n_pso_episodes, n_steps=n_steps)
                     pso.apply()
@@ -127,7 +76,7 @@ class NeatAlgorithm:
                       .format(time() - episode_start))
 
             print('Evaluating Population Goodness...')
-            for pop_i, creature in enumerate(self.population):
+            for pop_i, creature in enumerate(self.population.creatures):
                 observation = self.env.reset()
 
                 for step in range(n_steps):
@@ -148,7 +97,7 @@ class NeatAlgorithm:
                 mean_time_per_creature = episode_time / (pop_i + 1)
 
                 print(episode_complete_msg_format
-                      .format(pop_i + 1, self.n_pops, mean_fitness,
+                      .format(pop_i + 1, self.population.n_pops, mean_fitness,
                               median_fitness, mean_time_per_creature,
                               episode_time),
                       end='')
@@ -182,15 +131,12 @@ class NeatAlgorithm:
         print('Here are the species that made it to the end and the number of '
               'creatures in each of them:')
 
-        for species in sorted(self.species, key=lambda s: s.name):
-            print('%s (%s) - %d creatures - %d generations old.' %
-                  (species, species.representative.scientific_name,
-                   len(species), species.age))
+        self.population.list_species()
 
-        best_species = max(self.species, key=lambda s: s.mean_fitness)
+        best_species = self.population.best_species
 
         print()
-        oldest_creature = max(self.population, key=lambda c: c.age)
+        oldest_creature = self.population.oldest_creature
         print('The oldest creature was %s, who lived for %d generations.' %
               (oldest_creature, oldest_creature.age))
 
@@ -286,132 +232,13 @@ class NeatAlgorithm:
         """Do the post-episode stuff such as speciating, adjusting creature
         fitness, crossover etc.
         """
-        self.speciate()
-        self.adjust_fitness()
-        self.make_history()
-        self.allot_offspring_quota()
-        self.not_so_natural_selection()
-        self.mating_season()
-        self.spring_cleaning()
-
-    def speciate(self):
-        """Place creatures in the population into a species, or create a new
-        species if no suitable species exists.
-        """
-        print('Segregating Communities...', end='')
-
-        for creature in self.population:
-            for species_i in self.species:
-                if creature.distance(species_i.representative) < \
-                        Species.compatibility_threshold:
-                    species_i.add(creature)
-
-                    break
-            else:
-                new_species = Species()
-                new_species.add(creature)
-                new_species.representative = creature
-
-                self.species.add(new_species)
-
-    def adjust_fitness(self):
-        """Adjust the fitness of the population."""
-        print('\r' + ' ' * 80, end='')
-        print('\rAdjusting good boy points...')
-
-        for creature in self.population:
-            creature.adjust_fitness()
-
-    def make_history(self):
-        """Time to make some history."""
-        self.species_history.append([(species.name, len(species))
-                                     for species in self.species])
-
-        self.population = sorted(self.population)
-        worst = self.chump.copy()
-        median = self.lukewarm.copy()
-        best = self.champ.copy()
-        self.creature_history.append((worst, median, best))
-
-        print('Blame: %s - fitness: %d (adjusted: %.2f)' %
-              (self.chump, self.chump.raw_fitness, self.chump.fitness))
-        print('Praise: %s - fitness: %d (adjusted: %.2f)' %
-              (self.champ, self.champ.raw_fitness, self.champ.fitness))
-
-    def allot_offspring_quota(self):
-        """Allot the number of offspring each species is allowed for the
-        current generation.
-
-        Sort of like the One-Child policy but we force each species to have
-        exactly the amount of babies we tell them to. No more, no less.
-        """
-        print('\r' + ' ' * 80, end='')
-        print('\rAllotting offspring Quota...', end='')
-        species_mean_fitness = \
-            [species.mean_fitness for species in self.species]
-        sum_mean_species_fitness = sum(species_mean_fitness)
-
-        for species, mean_fitness in zip(self.species, species_mean_fitness):
-            species.allotted_offspring_quota = \
-                int(mean_fitness / sum_mean_species_fitness * self.n_pops)
-
-    def not_so_natural_selection(self):
-        """Perform selection on the population.
-
-        Species champions (the fittest creature in a species) are carried over
-        to the next generation (elitism). The worst performing portion of
-        each species is culled. R.I.P.
-        """
-        print('\r' + ' ' * 80, end='')
-        print('\rEnforcing Survival of the Fittest...', end='')
-        new_population = []
-
-        for species in self.species:
-            survivors = species.cull_the_weak(NeatAlgorithm.survival_threshold)
-            new_population += survivors
-
-        for creature in new_population:
-            creature.age += 1
-
-        self.population = new_population
-
-    def mating_season(self):
-        """It is now time for mating season, time to make some babies.
-
-        Replace the population with the next generation. Rip last generation.
-        """
-        print('\r' + ' ' * 80, end='')
-        print('\rRearing the next generation...', end='')
-        ranked_species = sorted(self.species,
-                                key=lambda s: s.champion.composite_fitness)
-        best_species = ranked_species[-1]
-        the_champ = best_species.champion
-        new_population = []
-
-        total_expected_offspring = sum([species.allotted_offspring_quota
-                                        for species in self.species])
-
-        if total_expected_offspring < self.n_pops:
-            pop_deficit = self.n_pops - total_expected_offspring
-
-            best_species.allotted_offspring_quota += pop_deficit
-            total_expected_offspring += pop_deficit
-        elif total_expected_offspring > self.n_pops:
-            pop_surplus = self.n_pops - total_expected_offspring
-            best_species.allotted_offspring_quota -= pop_surplus
-            total_expected_offspring -= pop_surplus
-
-        for species in self.species:
-            new_population += species.next_generation(the_champ,
-                                                      self.population)
-            print('.', end='')
-
-        self.population = new_population
-        print()
-
-    def spring_cleaning(self):
-        """Clean out all the cobwebs and extinct species."""
-        self.species = set(filter(lambda s: not s.is_extinct, self.species))
+        self.population.speciate()
+        self.population.adjust_fitness()
+        self.population.allot_offspring_quota()
+        self.population.make_history()
+        self.population.not_so_natural_selection()
+        self.population.mating_season()
+        self.population.spring_cleaning()
 
     def to_json(self):
         """Encode the current state of the algorithm as JSON.
@@ -424,15 +251,9 @@ class NeatAlgorithm:
         return dict(
             run_id=self.run_id,
             env=self.env.unwrapped.spec.id,
-            species=[species.to_json() for species in self.species],
-            n_pops=self.n_pops,
-            creature_history=
-            [(worst.to_json(), median.to_json(), best.to_json())
-             for (worst, median, best) in self.creature_history],
-            fitness_history=self.fitness_history,
-            species_history=self.species_history,
+            population=self.population.to_json(),
             settings=dict(
-                survival_threshold=NeatAlgorithm.survival_threshold,
+                survival_threshold=Population.survival_threshold,
                 compatibility_threshold=Species.compatibility_threshold,
                 p_interspecies_mating=Species.p_interspecies_mating,
                 disjointedness_importance=Creature.disjointedness_importance,
@@ -467,21 +288,7 @@ class NeatAlgorithm:
         algo.run_id = config['run_id']
         algo.n_trials = env.spec.trials
         algo.reward_threshold = env.spec.reward_threshold
-        algo.n_pops = config['n_pops']
-        algo.species = set(Species.from_json(s_config)
-                           for s_config in config['species'])
-
-        algo.population = []
-
-        for species in algo.species:
-            algo.population += species.members
-
-        algo.creature_history = \
-            [(Creature.from_json(w_config), Creature.from_json(m_config),
-              Creature.from_json(b_config))
-             for (w_config, m_config, b_config) in config['creature_history']]
-        algo.fitness_history = config['fitness_history']
-        algo.species_history = config['species_history']
+        algo.population = Population.from_json(config['population'])
 
         NeatAlgorithm.set_config(config['settings'])
 
@@ -495,7 +302,7 @@ class NeatAlgorithm:
             config: A dictionary containing the key-value pairs for the
                     algorithm parameters.
         """
-        NeatAlgorithm.survival_threshold = config['survival_threshold']
+        Population.survival_threshold = config['survival_threshold']
         Species.compatibility_threshold = config['compatibility_threshold']
         Species.p_interspecies_mating = config['p_interspecies_mating']
         Creature.disjointedness_importance = config['disjointedness_importance']

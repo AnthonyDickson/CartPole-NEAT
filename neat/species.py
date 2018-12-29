@@ -56,6 +56,25 @@ class Species:
         # Number of creatures in the species, past and present.
         self.total_num_members = 0
 
+    def copy(self):
+        """Make a copy of a species.
+
+        Returns: a copy of the species.
+        """
+        copy = Species(self.name)
+        Species.species_count -= 1
+        copy.id = self.id
+        copy.members = [member.copy() for member in self.members]
+        copy._representative = \
+            copy.members[self.members.index(self._representative)] \
+                if self._representative else None
+        copy.allotted_offspring_quota = self.allotted_offspring_quota
+        copy.is_extinct = self.is_extinct
+        copy.age = self.age
+        copy.total_num_members = self.total_num_members
+
+        return copy
+
     @property
     def mean_fitness(self):
         """The mean fitness of the entire species."""
@@ -131,7 +150,7 @@ class Species:
         Arguments:
             generation_champ: the best creature for the whole generation, who's
                               just an all-round champ.
-            population: the entire population of creatures, including the champ
+            population: the entire creatures of creatures, including the champ
                         and the rest of the chumps in the generation.
 
         Returns: a list of new creatures generated via crossover. Up to the
@@ -188,6 +207,7 @@ class Species:
         Returns: a gene object.
         """
         species = Species()
+        Species.species_count -= 1
 
         species.name = config['name']
         species.age = config['age']

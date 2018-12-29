@@ -95,8 +95,10 @@ class Creature:
         copy.phenotype = Phenotype(copy.genotype)
 
         copy.age = self.age
+        copy.fitness = self.fitness
+        copy.raw_fitness = self.raw_fitness
         copy.name_suffix = self.name_suffix
-        copy.past_species = self.past_species
+        copy.past_species = self.past_species.copy()
         copy.species = self.species
 
         return copy

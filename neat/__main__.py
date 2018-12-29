@@ -29,7 +29,7 @@ def main(debug_mode=False):
                                  'episode of the main NEAT algorithm.')
         parser.add_argument('--n-pops', type=int, default=n_pops,
                             help='how many individuals to have in the '
-                                 'population.')
+                                 'creatures.')
         parser.add_argument('--debug', action='store_true',
                             help='Flag to indicate if NEAT should be run in '
                                  'debug mode.')
