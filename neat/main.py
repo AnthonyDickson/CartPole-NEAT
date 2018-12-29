@@ -6,6 +6,7 @@ from time import time
 
 import gym
 import numpy as np
+import requests
 from gym import wrappers
 
 from neat.creature import Creature
@@ -19,6 +20,8 @@ class NeatAlgorithm:
 
     # Percentage of each species that is allowed to reproduce.
     survival_threshold = 0.3
+
+    api_url = 'http://localhost:5000/api'
 
     def __init__(self, env, n_pops=150):
         self.env = env
@@ -36,6 +39,12 @@ class NeatAlgorithm:
         run_id_hash = hashlib.sha1()
         run_id_hash.update(str(time()).encode('utf-8'))
         self.run_id = run_id_hash.hexdigest()[:16]
+
+        r = requests.request('POST', NeatAlgorithm.api_url + '/runs',
+                             json=dict(id=self.run_id))
+        if r.status_code != 201:
+            print('WARNING: Could not add run data to database.')
+            print(r.json())
 
     def init_population(self, n_inputs, n_outputs):
         """Create a population of n individuals.
@@ -158,6 +167,13 @@ class NeatAlgorithm:
 
         print('Total run time: {:.2f}s'.format(time() - sim_start))
         print()
+
+        r = requests.request('PATCH', '%s/runs/%s/finished' %
+                             (NeatAlgorithm.api_url, self.run_id))
+
+        if r.status_code != 204:
+            print("WARNING: Was not able to update run finished status.")
+            print(r.json())
 
         self.post_training_stuff(n_steps, debug_mode)
 
