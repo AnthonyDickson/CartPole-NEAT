@@ -38,6 +38,8 @@ services:
     restart: always
   react:
     build: frontend
+    depends_on:
+      - flask
     environment:
       - NODE_ENV=production
       - PORT=${REACT_PORT}
