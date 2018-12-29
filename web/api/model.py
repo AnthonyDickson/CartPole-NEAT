@@ -40,3 +40,20 @@ class NodeSchema(ma.Schema):
     activation = fields.String()
 
 
+class Connection(db.Model):
+    """A connection in a neural network computational graph."""
+    object_id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.String(16), db.ForeignKey('run.id'), nullable=False, primary_key=True)
+    id = db.Column(db.Integer, nullable=False)
+    target_id = db.Column(db.Integer, nullable=False)
+    input_id = db.Column(db.Integer, nullable=False)
+    weight = db.Column(db.Float, nullable=False)
+
+
+class ConnectionSchema(ma.Schema):
+    object_id = fields.Integer
+    run_id = fields.String
+    id = fields.Integer
+    target_id = fields.Integer
+    input_id = fields.Integer
+    weight = fields.Float
