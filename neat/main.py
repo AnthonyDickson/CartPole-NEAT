@@ -266,7 +266,6 @@ class NeatAlgorithm:
                 p_mate_choose=Genome.p_mate_choose,
                 p_add_node=Genome.p_add_node,
                 p_add_connection=Genome.p_add_connection,
-                p_recurrent_connection=Genome.p_recurrent_connection,
                 p_re_enable_connection=Genome.p_re_enable_connection,
                 p_perturb=Genome.p_perturb,
                 perturb_range=Genome.perturb_range
@@ -313,7 +312,6 @@ class NeatAlgorithm:
         Genome.p_mate_choose = config['p_mate_choose']
         Genome.p_add_node = config['p_add_node']
         Genome.p_add_connection = config['p_add_connection']
-        Genome.p_recurrent_connection = config['p_recurrent_connection']
         Genome.p_re_enable_connection = config['p_re_enable_connection']
         Genome.p_perturb = config['p_perturb']
         Genome.perturb_range = config['perturb_range']

@@ -28,9 +28,6 @@ class Genome:
     # The probability to add a connection gene.
     p_add_connection = 0.06
 
-    # The probability that the next connection gene will be a recurrent one.
-    p_recurrent_connection = 0.2
-
     # The probability that a disabled connection gene is re-enabled.
     p_re_enable_connection = 0.03
 
