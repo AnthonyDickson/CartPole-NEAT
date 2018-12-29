@@ -250,14 +250,12 @@ class Genome:
         connection_to_split.connection.is_enabled = False
 
         first_connection = \
-            ConnectionGene(connection_to_split.connection.origin_id,
-                           new_node.node.id)
+            ConnectionGene(connection_to_split.connection.input_id, new_node.node.id)
         first_connection.connection.weight = 1.0
         self.add_gene(first_connection)
 
         second_connection = \
-            ConnectionGene(new_node.node.id,
-                           connection_to_split.connection.target_id)
+            ConnectionGene(new_node.node.id, connection_to_split.connection.input_id)
         second_connection.connection.weight = \
             connection_to_split.connection.weight
         self.add_gene(second_connection)

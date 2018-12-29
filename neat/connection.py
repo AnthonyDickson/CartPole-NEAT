@@ -5,27 +5,28 @@ class Connection:
     """A connection between two nodes in a neural network computation graph."""
     count = 0  # a count of unique nodes
 
-    def __init__(self, origin_id, target_id):
+    def __init__(self, target_id, input_id):
         """Create a connection between nodes.
 
         Arguments:
-            origin_id: The id of the node that receives the input.
-            target_id: The id of the node that provides the input.
+            target_id: The id of the node that receives the input.
+            input_id: The id of the node that provides the input.
         """
-        self.origin_id = origin_id
         self.target_id = target_id
+        self.input_id = input_id
         self.weight = random.gauss(0, 1)
         self.is_recurrent = False
 
         Connection.count += 1
         self.id = Connection.count
+        self.object_id = id(self)
 
     def copy(self):
         """Make a copy of a connection.
 
         Returns: the copy of the connection.
         """
-        copy = Connection(self.origin_id, self.target_id)
+        copy = Connection(self.target_id, self.input_id)
         # copies of connections are not unique and therefore not counted.
         Connection.count -= 1
         copy.id = self.id
@@ -40,9 +41,10 @@ class Connection:
         Returns: the connection encoded as JSON.
         """
         return dict(
-            origin_id=self.origin_id,
-            target_id=self.target_id,
+            origin_id=self.target_id,
+            input_id=self.input_id,
             id=self.id,
+            object_id=self.object_id,
             weight=self.weight
         )
 
@@ -55,23 +57,24 @@ class Connection:
 
         Returns: a connection object.
         """
-        connection = Connection(config['origin_id'], config['target_id'])
+        connection = Connection(config['target_id'], config['input_id'])
         connection.id = config['id']
+        connection.object_id = config['object_id']
         connection.weight = config['weight']
 
         return connection
 
     def __str__(self):
-        return 'Connection_{}->{}'.format(self.origin_id, self.target_id) + \
+        return 'Connection_{}->{}'.format(self.target_id, self.input_id) + \
                (' (recurrent)' if self.is_recurrent else '')
 
     def __eq__(self, other):
-        return self.origin_id == other.origin_id and \
-               self.target_id == other.target_id
+        return self.target_id == other.target_id and \
+               self.input_id == other.input_id
 
     def __hash__(self):
         hash_code = 7
-        hash_code += hash_code * self.origin_id % 17
-        hash_code += hash_code * self.target_id % 37
+        hash_code += hash_code * self.target_id % 17
+        hash_code += hash_code * self.input_id % 37
 
         return hash_code

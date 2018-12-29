@@ -92,6 +92,7 @@ class Node:
 
         Node.count += 1
         self.id = Node.count
+        self.object_id = id(self)
 
     def copy(self):
         """Make a copy of a node.
@@ -125,6 +126,7 @@ class Node:
             activation=self.activation.__name__,
             bias=self.bias,
             id=self.id,
+            object_id=self.object_id,
             type=self.__class__.__name__
         )
 
@@ -159,6 +161,7 @@ class Node:
 
         node.bias = config['bias']
         node.id = config['id']
+        node.object_id = config['object_id']
 
         return node
 

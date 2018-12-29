@@ -118,10 +118,10 @@ class Graph:
         visited.add(node_id)
 
         for input_connection in self.connections_dict[node_id]:
-            if input_connection.target_id in visited:
+            if input_connection.input_id in visited:
                 input_connection.is_recurrent = True
             else:
-                self._mark_recurrent_inputs(input_connection.target_id,
+                self._mark_recurrent_inputs(input_connection.input_id,
                                             visited.copy())
 
     def _has_path_to_input(self, node_id, visited=None):
@@ -144,8 +144,8 @@ class Graph:
         visited.add(node_id)
 
         for node_input in self.connections_dict[node_id]:
-            if node_input.target_id not in visited \
-                    and self._has_path_to_input(node_input.target_id,
+            if node_input.input_id not in visited \
+                    and self._has_path_to_input(node_input.input_id,
                                                 visited.copy()):
                 return True
 
@@ -183,7 +183,7 @@ class Graph:
         Arguments:
             connection: The Connection object to be added to the graph.
         """
-        self.connections_dict[connection.origin_id].append(connection)
+        self.connections_dict[connection.target_id].append(connection)
 
         # Adding a connection may break the graph so we force the graph to be
         # compiled again to enforce a re-run of sanity and validity checks.
@@ -255,13 +255,13 @@ class Graph:
         node_output = node.output if node.id in self.sensors else node.bias
 
         for input_connection in self.connections_dict[node_id]:
-            target = self.nodes[input_connection.target_id]
+            target = self.nodes[input_connection.input_id]
 
             if input_connection.is_recurrent:
                 node_output += input_connection.weight * target.prev_output
             else:
                 node_output += input_connection.weight * \
-                               self._compute_output(input_connection.target_id,
+                               self._compute_output(input_connection.input_id,
                                                     level=level + 1)
 
         node.output = node.activation(node_output)
