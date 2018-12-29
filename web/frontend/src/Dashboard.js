@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {ListGroup, ListGroupItem} from "reactstrap";
+import {Button, ListGroup, ListGroupItem} from "reactstrap";
 import Moment from 'react-moment';
 import 'moment-timezone';
 
@@ -12,15 +12,17 @@ class RunList extends Component {
             return <div>No data.</div>
         }
 
-        return <ListGroup>
-            {
-                this.props.data.map((item, i) =>
-                    <ListGroupItem key={i}>
-                        <RunListItem item={item}/>
-                    </ListGroupItem>
-                )
-            }
-        </ListGroup>;
+        return (
+            <ListGroup>
+                {
+                    this.props.data.map((item, i) =>
+                        <ListGroupItem key={i}>
+                            <RunListItem i={i} item={item} handleDelete={this.props.handleDelete}/>
+                        </ListGroupItem>
+                    )
+                }
+            </ListGroup>
+        );
     }
 }
 
@@ -34,7 +36,9 @@ class RunListItem extends Component {
             <ul className="list-inline">
                 <li className="list-inline-item">{this.props.item.id}</li>
                 <li className="list-inline-item">{start_date}</li>
-                <li className="list-inline-item">{end_date}
+                <li className="list-inline-item">{end_date}</li>
+                <li className="list-inline-item float-right">
+                    <Button onClick={() => this.props.handleDelete(this.props.item.id)} color="danger">Delete</Button>
                 </li>
             </ul>
         );
@@ -49,15 +53,32 @@ class Dashboard extends Component {
             isLoading: true,
             data: null
         };
+
+        this.delete = this.delete.bind(this);
+        this.update = this.update.bind(this);
+        setInterval(this.update, 60 * 1000);
     }
 
     componentDidMount() {
+        this.update();
+    }
+
+    update() {
         fetch(API + "/runs")
             .then(response => response.json())
             .then(response => this.setState({
                 isLoading: false,
                 data: response.data
-            }))
+            }));
+    }
+
+    delete(id) {
+        fetch(API + '/runs/' + id, {method: "DELETE"})
+            .then(response => {
+                if (response.status === 204) {
+                    this.setState({data: this.state.data.filter(elem => elem.id !== id)});
+                }
+            });
     }
 
     render() {
@@ -66,7 +87,10 @@ class Dashboard extends Component {
         }
 
         return (
-            <RunList data={this.state.data}/>
+            <>
+                <Button onClick={this.update}>Update</Button>
+                <RunList data={this.state.data} handleDelete={this.delete}/>
+            </>
         );
     }
 }
