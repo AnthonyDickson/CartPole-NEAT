@@ -23,10 +23,10 @@ class Genome:
     # The below parameters are for controlling mutation.
 
     # The probability to add a node gene.
-    p_add_node = 0.06
+    p_add_node = 0.01
 
     # The probability to add a connection gene.
-    p_add_connection = 0.06
+    p_add_connection = 0.05
 
     # The probability that a disabled connection gene is re-enabled.
     p_re_enable_connection = 0.03
@@ -35,7 +35,7 @@ class Genome:
     p_perturb = 0.1
 
     # The range of perturbations that can occur to a weight or bias.
-    perturb_range = 1.0
+    perturb_range = 0.2
 
     def __init__(self):
         self.node_genes = []

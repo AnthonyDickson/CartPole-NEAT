@@ -29,7 +29,7 @@ class NeatAlgorithm:
         self.population = Population(genesis, n_pops)
 
         self.fitness_history = []
-        self.snapshots = []
+        self.snapshot_i = 0
 
         run_id_hash = hashlib.sha1()
         run_id_hash.update(str(time()).encode('utf-8'))
@@ -109,7 +109,11 @@ class NeatAlgorithm:
                 break
 
             print()
-            self.do_the_thing()
+
+            if not debug_mode:
+                self.make_snapshot()
+
+            self.population.next_generation()
             print('Total episode time: %.4fs.\n' % (time() - episode_start))
         else:
             print('Could not solve in %d episodes :(' % n_episodes)
@@ -219,7 +223,9 @@ class NeatAlgorithm:
         if path[-1] != '/':
             path += '/'
 
-        fullpath = path + (filename if filename else '%s.json' % time())
+        path += self.run_id + '/'
+
+        fullpath = path + (filename if filename else 'dump.json')
 
         os.makedirs(path, exist_ok=True)
 
@@ -228,17 +234,21 @@ class NeatAlgorithm:
 
         print('Saved training data to: %s.' % fullpath)
 
-    def do_the_thing(self):
-        """Do the post-episode stuff such as speciating, adjusting creature
-        fitness, crossover etc.
-        """
-        self.population.speciate()
-        self.population.adjust_fitness()
-        self.population.allot_offspring_quota()
-        self.population.make_history()
-        self.population.not_so_natural_selection()
-        self.population.mating_season()
-        self.population.spring_cleaning()
+    def make_snapshot(self, path='data/training/', filename=None):
+        """Save training data to file."""
+        if path[-1] != '/':
+            path += '/'
+
+        path += self.run_id + '/'
+        self.snapshot_i += 1
+
+        fullpath = path + (filename if filename else
+                           'snapshot-%02d.json' % self.snapshot_i)
+
+        os.makedirs(path, exist_ok=True)
+
+        with open(fullpath, 'w') as f:
+            json.dump(self.population.to_json(), f)
 
     def to_json(self):
         """Encode the current state of the algorithm as JSON.

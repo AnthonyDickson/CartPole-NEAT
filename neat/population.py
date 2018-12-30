@@ -16,12 +16,16 @@ class Population:
             n_pops: How many creatures should be in the population.
         """
         self.n_pops = n_pops
+        self.species = set()
 
         if seed_creature:
             self.creatures = [seed_creature.copy() for _ in range(n_pops)]
+
+            genesis_species = Species()
+            genesis_species.assign_members(self.creatures)
+            self.species.add(genesis_species)
         else:
             self.creatures = []
-        self.species = set()
 
     @property
     def champ(self):
@@ -61,6 +65,9 @@ class Population:
         species if no suitable species exists.
         """
         print('Segregating Communities...', end='')
+        # Adding these lines slows down convergence a lot.
+        for species in self.species:
+            species.members.clear()
 
         for creature in self.creatures:
             for species in self.species:
@@ -75,6 +82,8 @@ class Population:
                 new_species.representative = creature
 
                 self.species.add(new_species)
+
+        self.species = set(filter(lambda s: len(s) > 0, self.species))
 
     def adjust_fitness(self):
         """Adjust the fitness of the creatures."""
@@ -109,6 +118,21 @@ class Population:
         for species, mean_fitness in zip(self.species, species_mean_fitness):
             species.allotted_offspring_quota = \
                 int(mean_fitness / sum_mean_species_fitness * self.n_pops)
+
+        best_species = self.best_species
+
+        total_expected_offspring = sum([species.allotted_offspring_quota
+                                        for species in self.species])
+
+        if total_expected_offspring < self.n_pops:
+            pop_deficit = self.n_pops - total_expected_offspring
+
+            best_species.allotted_offspring_quota += pop_deficit
+            total_expected_offspring += pop_deficit
+        elif total_expected_offspring > self.n_pops:
+            pop_surplus = self.n_pops - total_expected_offspring
+            best_species.allotted_offspring_quota -= pop_surplus
+            total_expected_offspring -= pop_surplus
 
         print()
 
@@ -145,36 +169,28 @@ class Population:
         the_champ = best_species.champion
         new_population = []
 
-        total_expected_offspring = sum([species.allotted_offspring_quota
-                                        for species in self.species])
-
-        if total_expected_offspring < self.n_pops:
-            pop_deficit = self.n_pops - total_expected_offspring
-
-            best_species.allotted_offspring_quota += pop_deficit
-            total_expected_offspring += pop_deficit
-        elif total_expected_offspring > self.n_pops:
-            pop_surplus = self.n_pops - total_expected_offspring
-            best_species.allotted_offspring_quota -= pop_surplus
-            total_expected_offspring -= pop_surplus
-
         for species in self.species:
             new_population += species.next_generation(the_champ,
                                                       self.creatures)
             print('.', end='')
 
         self.creatures = new_population
+        self.species = set(filter(lambda s: not s.is_extinct, self.species))
         print()
+
+    def next_generation(self):
+        self.speciate()
+        self.adjust_fitness()
+        self.allot_offspring_quota()
+        self.make_history()
+        self.not_so_natural_selection()
+        self.mating_season()
 
     def list_species(self):
         for species in sorted(self.species, key=lambda s: s.name):
             print('%s (%s) - %d creatures - %d generations old.' %
                   (species, species.representative.scientific_name,
                    len(species), species.age))
-
-    def spring_cleaning(self):
-        """Clean out all the cobwebs and extinct species."""
-        self.species = set(filter(lambda s: not s.is_extinct, self.species))
 
     def to_json(self):
         """Encode the current state of the algorithm as JSON.

@@ -13,7 +13,7 @@ class Species:
 
     # The distance threshold used when deciding if two creatures should
     # belong in the same species or not.
-    compatibility_threshold = 4.0
+    compatibility_threshold = 3.0
 
     # The probability that a member of this species will mate with a creature
     # from another species.
@@ -49,7 +49,7 @@ class Species:
         self.id = Species.next_id()
         self.name = name if name != '' else Species.next_name()
         self.members = list()
-        self._representative = None
+        self.representative = None
         self.allotted_offspring_quota = 0
         self.is_extinct = False
         self.age = 0  # How many generations the species has survived.
@@ -65,9 +65,9 @@ class Species:
         Species.species_count -= 1
         copy.id = self.id
         copy.members = [member.copy() for member in self.members]
-        copy._representative = \
-            copy.members[self.members.index(self._representative)] \
-                if self._representative else None
+        copy.representative = \
+            None if self.representative is None else \
+                copy.members[self.members.index(self.representative)]
         copy.allotted_offspring_quota = self.allotted_offspring_quota
         copy.is_extinct = self.is_extinct
         copy.age = self.age
@@ -86,18 +86,6 @@ class Species:
         self.members = sorted(self.members)
 
         return self.members[-1]
-
-    @property
-    def representative(self):
-        if self._representative is None or \
-                self._representative not in self.members:
-            self._representative = random.choice(self.members)
-
-        return self._representative
-
-    @representative.setter
-    def representative(self, value):
-        self._representative = value
 
     def add(self, creature):
         """Add a creature to the species.
@@ -121,8 +109,15 @@ class Species:
         for creature in sorted(members):
             self.add(creature)
 
-        if self.representative not in self.members:
-            self.representative = random.choice(members)
+        self.update_representative()
+
+    def update_representative(self):
+        """Choose the next representative."""
+        if len(self) == 0:
+            self.is_extinct = True
+            self.representative = None
+        elif self.representative not in self.members:
+            self.representative = random.choice(self.members)
 
     def cull_the_weak(self, how_many):
         """Cull the Weak
@@ -156,8 +151,14 @@ class Species:
         Returns: a list of new creatures generated via crossover. Up to the
                  allotted number of offspring will be created.
         """
+        if self.allotted_offspring_quota == 0:
+            self.is_extinct = True  # R.I.P.
+
+            return []
+
         offspring = []
         pool = self.members
+        self.members = sorted(self.members)
 
         if len(offspring) < self.allotted_offspring_quota:
             offspring.append(self.champion.copy())
@@ -175,11 +176,8 @@ class Species:
 
             offspring.append(parent1.mate(parent2))
 
-        if len(offspring) == 0:
-            self.is_extinct = True  # R.I.P.
-        else:
-            self.assign_members(offspring)
-            self.age += 1
+        self.assign_members(offspring)
+        self.age += 1
 
         return offspring
 
