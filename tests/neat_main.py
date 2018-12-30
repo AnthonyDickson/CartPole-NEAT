@@ -26,7 +26,7 @@ class NeatAlgorithmUnitTest(unittest.TestCase):
             sys.stderr = f
 
             env = gym.make('CartPole-v0')
-            neat = NeatAlgorithm(env)
+            neat = NeatAlgorithm(env, offline=True)
 
             neat.train(n_episodes=5, debug_mode=True)
         except Exception as error:
@@ -48,7 +48,7 @@ class NeatAlgorithmUnitTest(unittest.TestCase):
             sys.stderr = f
 
             env = gym.make('CartPole-v0')
-            neat = NeatAlgorithm(env)
+            neat = NeatAlgorithm(env, offline=True)
 
             neat.train(n_episodes=5, debug_mode=True)
 

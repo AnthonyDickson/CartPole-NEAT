@@ -21,7 +21,7 @@ class NeatAlgorithm:
 
     api_url = 'http://localhost:5000/api'
 
-    def __init__(self, env, n_pops=150):
+    def __init__(self, env, n_pops=150, offline=False):
         self.env = env
         self.n_trials = env.spec.trials
         self.reward_threshold = env.spec.reward_threshold
@@ -35,11 +35,14 @@ class NeatAlgorithm:
         run_id_hash.update(str(time()).encode('utf-8'))
         self.run_id = run_id_hash.hexdigest()[:16]
 
-        r = requests.request('POST', NeatAlgorithm.api_url + '/runs',
-                             json=dict(id=self.run_id))
-        if r.status_code != 201:
-            print('WARNING: Could not add run data to database.')
-            print(r.json())
+        self.offline = offline
+
+        if not self.offline:
+            r = requests.request('POST', NeatAlgorithm.api_url + '/runs',
+                                 json=dict(id=self.run_id))
+            if r.status_code != 201:
+                print('WARNING: Could not add run data to database.')
+                print(r.json())
 
     def train(self, n_episodes=100, n_steps=200, n_pso_episodes=5,
               debug_mode=False):
@@ -121,12 +124,13 @@ class NeatAlgorithm:
         print('Total run time: {:.2f}s'.format(time() - sim_start))
         print()
 
-        r = requests.request('PATCH', '%s/runs/%s/finished' %
-                             (NeatAlgorithm.api_url, self.run_id))
+        if not self.offline:
+            r = requests.request('PATCH', '%s/runs/%s/finished' %
+                                 (NeatAlgorithm.api_url, self.run_id))
 
-        if r.status_code != 204:
-            print("WARNING: Was not able to update run finished status.")
-            print(r.json())
+            if r.status_code != 204:
+                print("WARNING: Was not able to update run finished status.")
+                print(r.json())
 
         self.post_training_stuff(n_steps, debug_mode)
 

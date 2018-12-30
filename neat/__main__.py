@@ -11,6 +11,7 @@ def main(debug_mode=False):
     n_pso_episodes = 8
     n_steps = 200
     n_pops = 150
+    offline = False
 
     if not debug_mode:
         parser = argparse.ArgumentParser(
@@ -33,6 +34,9 @@ def main(debug_mode=False):
         parser.add_argument('--debug', action='store_true',
                             help='Flag to indicate if NEAT should be run in '
                                  'debug mode.')
+        parser.add_argument('--offline', action='store_true',
+                            help='Flag to indicate that NEAT should be run '
+                                 'without uploading training data.')
 
         args = parser.parse_args()
 
@@ -43,12 +47,13 @@ def main(debug_mode=False):
         n_steps = args.n_steps
         n_pops = args.n_pops
         n_pso_episodes = args.n_pso_episodes
+        offline = args.offline
 
     if debug_mode:
         random.seed(42)
 
     env = gym.make('CartPole-v0')
-    neat = NeatAlgorithm(env, n_pops)
+    neat = NeatAlgorithm(env, n_pops, offline=offline)
     neat.train(n_episodes, n_steps, n_pso_episodes, debug_mode=debug_mode)
 
 
