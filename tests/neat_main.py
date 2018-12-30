@@ -53,7 +53,7 @@ class NeatAlgorithmUnitTest(unittest.TestCase):
             neat.train(n_episodes=5, debug_mode=True)
 
             dump = json.dumps(neat.to_json())
-            neat_load = NeatAlgorithm.from_json(json.loads(dump))
+            neat_load = NeatAlgorithm.from_json(json.loads(dump), offline=True)
 
             self.assertEqual(neat.run_id, neat_load.run_id)
             self.assertEqual(len(neat.population), len(neat_load.population))

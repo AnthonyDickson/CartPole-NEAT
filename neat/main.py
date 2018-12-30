@@ -287,17 +287,18 @@ class NeatAlgorithm:
         )
 
     @staticmethod
-    def from_json(config):
+    def from_json(config, offline=False):
         """Load an instance of the NEAT algorithm from JSON.
 
         Arguments:
             config: the JSON dictionary loaded from file.
+            offline: Whether the NEAT instance should be started 'offline'.
 
         Returns: an instance of the NEAT algorithm.
         """
         env = gym.make(config['env'])
 
-        algo = NeatAlgorithm(env)
+        algo = NeatAlgorithm(env, offline=offline)
         algo.run_id = config['run_id']
         algo.n_trials = env.spec.trials
         algo.reward_threshold = env.spec.reward_threshold
