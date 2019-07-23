@@ -3,5 +3,5 @@ dependencies:
   - python=3.7
   - numpy
   - pip:
-    - gym
+    - gym==0.12.1
     - requests
